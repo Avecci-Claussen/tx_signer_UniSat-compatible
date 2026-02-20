@@ -1,0 +1,2895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="icon" href="images/TLB-Icon-TransBG.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PSBT Signing Tool</title>
+  <style>
+    :root {
+      --bg-deep: #0c0b0a;
+      --bg-main: #141210;
+      --bg-card: #1c1916;
+      --bg-elevated: #252220;
+      --border: #3d3630;
+      --border-focus: #b8860b;
+      --primary: #e89520;
+      --primary-hover: #f0a830;
+      --primary-dim: #c47a18;
+      --accent: #f5b042;
+      --accent-muted: #d4a03a;
+      --text: #f0ebe3;
+      --text-muted: #9a958c;
+      --success: #2d8a5e;
+      --success-bg: #1a3326;
+      --error: #c94a4a;
+      --error-bg: #2a1a1a;
+      --link: #5ec4b0;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --space: 20px;
+      --space-lg: 28px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      background: var(--bg-deep);
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .container {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: var(--space-lg) 24px 48px;
+      min-height: 100vh;
+    }
+    h2.page-title {
+      margin: 0 0 var(--space-lg) 0;
+      font-size: 1.75rem;
+      font-weight: 700;
+      text-align: center;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+
+    /* --- Info Section --- */
+    .info-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: var(--space-lg);
+      overflow: hidden;
+    }
+    .info-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 22px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s;
+    }
+    .info-header:hover { background: rgba(232, 149, 32, 0.06); }
+    .info-header-title {
+      color: var(--primary);
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .info-toggle {
+      color: var(--text-muted);
+      font-size: 1rem;
+      transition: transform 0.2s;
+    }
+    .info-toggle.open { transform: rotate(180deg); }
+    .info-body {
+      padding: 0 22px 20px;
+      display: none;
+    }
+    .info-body.open { display: block; }
+    .info-title {
+      color: var(--accent-muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin: 16px 0 8px;
+    }
+    .info-text {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.65;
+      margin-bottom: 10px;
+    }
+    .info-text strong { color: var(--primary); }
+    .lang-selector {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .lang-btn {
+      padding: 8px 14px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+    }
+    .lang-btn:hover { background: var(--border); color: var(--text); }
+    .lang-btn.active {
+      background: var(--primary);
+      color: var(--bg-deep);
+      border-color: var(--primary);
+      font-weight: 600;
+    }
+    .info-warning {
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: rgba(201, 74, 74, 0.1);
+      border: 1px solid rgba(201, 74, 74, 0.35);
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+    .info-warning strong { color: var(--error); }
+
+    /* --- Wallet Status --- */
+    .wallet-status {
+      margin-bottom: var(--space-lg);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .wallet-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .wallet-badge.connected {
+      background: var(--success-bg);
+      border: 1px solid rgba(45, 138, 94, 0.5);
+      color: #4ade80;
+    }
+    .wallet-badge.disconnected {
+      background: var(--error-bg);
+      border: 1px solid rgba(201, 74, 74, 0.4);
+      color: #f87171;
+    }
+    .wallet-badge .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .wallet-badge.connected .dot { background: #4ade80; }
+    .wallet-badge.disconnected .dot { background: #f87171; }
+    .wallet-info-text {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      word-break: break-all;
+      flex: 1;
+      min-width: 200px;
+    }
+    .wallet-info-text .addr { color: var(--link); font-weight: 600; }
+    .wallet-info-text .pubk { color: var(--accent); font-size: 0.8rem; word-break: break-all; }
+    .wallet-info-text .balance { color: #4ade80; font-weight: 600; }
+    .wallet-info-row { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+    #connect-btn, #connect-btn-mobile {
+      padding: 12px 24px;
+      min-height: 48px;
+      font-size: 0.95rem;
+      border-radius: var(--radius-sm);
+      white-space: nowrap;
+      font-weight: 600;
+    }
+    .mobile-wallet-options {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 12px;
+      width: 100%;
+    }
+    .mobile-wallet-options.show { display: flex; }
+    .mobile-wallet-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.95rem;
+      min-height: 52px;
+    }
+    .mobile-wallet-btn:hover { border-color: var(--primary); background: rgba(232, 149, 32, 0.08); }
+    .mobile-wallet-btn .icon { font-size: 1.25rem; }
+
+    /* --- Tabs --- */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: var(--space-lg);
+      padding: 4px;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .tab {
+      padding: 12px 20px;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active {
+      background: var(--primary);
+      color: var(--bg-deep);
+      font-weight: 600;
+    }
+    .tab-content { display: none; margin-top: 0; }
+    .tab-content.active { display: block; }
+
+    /* --- Form elements --- */
+    label {
+      display: block;
+      margin-top: 18px;
+      margin-bottom: 8px;
+      color: var(--accent-muted);
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    textarea, input[type="text"] {
+      width: 100%;
+      background: var(--bg-elevated);
+      color: var(--text);
+      border: 1px solid var(--border);
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+    textarea[readonly] { color: var(--text-muted); }
+    textarea:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(232, 149, 32, 0.15);
+    }
+
+    /* --- Buttons --- */
+    button {
+      margin-top: 12px;
+      padding: 14px 24px;
+      background: linear-gradient(180deg, var(--primary) 0%, var(--primary-dim) 100%);
+      color: var(--bg-deep);
+      font-weight: 600;
+      font-size: 0.95rem;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      transition: all 0.2s;
+      min-height: 48px;
+    }
+    button:hover { filter: brightness(1.08); }
+    button:active { transform: translateY(1px); }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    button.secondary {
+      background: var(--bg-elevated);
+      color: var(--text);
+      border: 1px solid var(--border);
+      box-shadow: none;
+    }
+    button.secondary:hover { border-color: var(--primary); color: var(--accent); }
+    button.success-btn { background: var(--success); color: #fff; }
+    button.danger-btn { background: var(--error); color: #fff; }
+
+    /* --- Upload area --- */
+    .upload-area {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      text-align: center;
+      background: var(--bg-card);
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: var(--space);
+    }
+    .upload-area:hover, .upload-area.dragover {
+      border-color: var(--primary);
+      background: rgba(232, 149, 32, 0.06);
+    }
+    .upload-icon { font-size: 2rem; margin-bottom: 10px; opacity: 0.9; }
+    .upload-text { color: var(--text); font-size: 0.95rem; margin-bottom: 6px; }
+    .upload-hint { color: var(--text-muted); font-size: 0.8rem; }
+    input[type="file"] { display: none; }
+    .divider {
+      text-align: center;
+      margin: 20px 0;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    /* --- PSBT Format Badge --- */
+    .format-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    .format-badge.base64 { background: var(--success-bg); color: #4ade80; border: 1px solid rgba(45, 138, 94, 0.4); }
+    .format-badge.hex { background: rgba(94, 196, 176, 0.15); color: var(--link); border: 1px solid rgba(94, 196, 176, 0.3); }
+    .format-badge.unknown { background: rgba(245, 176, 66, 0.15); color: var(--accent); border: 1px solid rgba(245, 176, 66, 0.3); }
+
+    /* --- TX Info --- */
+    .tx-info {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+      margin-bottom: var(--space);
+      max-height: 60vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+    .tx-info::-webkit-scrollbar { width: 8px; }
+    .tx-info::-webkit-scrollbar-track { background: var(--bg-deep); border-radius: 4px; }
+    .tx-info::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .tx-info-scrollable {
+      max-height: 280px;
+      overflow-y: auto;
+      margin-top: 12px;
+      padding: 14px;
+      background: var(--bg-elevated);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+    .tx-info-scrollable::-webkit-scrollbar { width: 6px; }
+    .tx-info-scrollable::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .tx-info-title {
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 0.85rem;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .tx-info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+      gap: 16px;
+    }
+    .tx-info-row:last-child { border-bottom: none; }
+    .tx-info-label { color: var(--text-muted); flex-shrink: 0; }
+    .tx-info-value {
+      color: var(--text);
+      font-weight: 500;
+      text-align: right;
+      word-break: break-all;
+      min-width: 0;
+    }
+    .tx-info-value .addr { color: var(--link); font-weight: 600; }
+
+    /* --- Diagram --- */
+    .diagram {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin: var(--space) 0;
+    }
+    .diagram-box {
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 16px;
+      text-align: center;
+    }
+    .diagram-box.inputs { border-color: rgba(248, 113, 113, 0.5); background: rgba(248, 113, 113, 0.06); }
+    .diagram-box.outputs { border-color: rgba(94, 196, 176, 0.5); background: rgba(94, 196, 176, 0.06); }
+    .diagram-arrow { font-size: 1.5rem; color: var(--primary); }
+    .diagram-title { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .diagram-value { font-size: 1.5rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .diagram-label { font-size: 0.75rem; color: var(--text-muted); }
+
+    /* --- Broadcast Result --- */
+    .broadcast-result {
+      background: var(--success-bg);
+      border: 1px solid rgba(45, 138, 94, 0.4);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-top: var(--space);
+    }
+    .broadcast-result .txid-label {
+      color: #4ade80;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .broadcast-result .txid-value {
+      font-family: monospace;
+      font-size: 0.9rem;
+      color: var(--text);
+      word-break: break-all;
+      margin-bottom: 14px;
+    }
+    .broadcast-result .mempool-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--link);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .broadcast-result .mempool-link:hover {
+      border-color: var(--link);
+      background: rgba(94, 196, 176, 0.1);
+    }
+
+    /* --- Toast --- */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 400px;
+    }
+    .toast {
+      padding: 14px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      animation: toastIn 0.3s ease;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      border: 1px solid;
+    }
+    .toast.info { background: var(--bg-card); border-color: var(--border); color: var(--link); }
+    .toast.success { background: var(--success-bg); border-color: rgba(45, 138, 94, 0.4); color: #4ade80; }
+    .toast.error { background: var(--error-bg); border-color: rgba(201, 74, 74, 0.4); color: #f87171; }
+    .toast.warning { background: rgba(245, 176, 66, 0.12); border-color: rgba(245, 176, 66, 0.35); color: var(--accent); }
+    .toast .toast-close { cursor: pointer; margin-left: auto; opacity: 0.7; font-size: 1rem; }
+    .toast .toast-close:hover { opacity: 1; }
+    @keyframes toastIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* --- Spinner --- */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* --- Env Banner --- */
+    .env-banner {
+      display: none;
+      padding: 14px 20px;
+      border-radius: var(--radius-sm);
+      margin-bottom: var(--space);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      border: 1px solid;
+    }
+    .env-banner.mobile-no-ext {
+      background: rgba(245, 176, 66, 0.1);
+      border-color: rgba(245, 176, 66, 0.35);
+      color: var(--accent);
+      display: block;
+    }
+    .env-banner.desktop-no-ext {
+      background: var(--error-bg);
+      border-color: rgba(201, 74, 74, 0.35);
+      color: #f87171;
+      display: block;
+    }
+    .env-banner a { color: var(--primary); text-decoration: underline; }
+
+    /* --- Mobile Sign Section --- */
+    .mobile-sign-section {
+      display: none;
+      margin-top: var(--space);
+      padding: 20px 22px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .mobile-sign-section.show { display: block; }
+    .mobile-sign-section h4 {
+      color: var(--primary);
+      margin: 0 0 14px 0;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .mobile-sign-actions { display: flex; flex-direction: column; gap: 10px; }
+    .deeplink-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 16px 20px;
+      background: linear-gradient(180deg, var(--primary) 0%, var(--primary-dim) 100%);
+      color: var(--bg-deep);
+      font-weight: 700;
+      font-size: 1rem;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      min-height: 54px;
+      width: 100%;
+      box-shadow: 0 4px 12px rgba(232, 149, 32, 0.25);
+    }
+    .deeplink-btn:active { transform: translateY(1px); }
+    .or-divider { text-align: center; color: var(--text-muted); font-size: 0.8rem; margin: 12px 0; }
+    .paste-signed-area { margin-top: 12px; }
+    .paste-signed-area textarea { min-height: 88px; }
+
+    /* --- Inspector --- */
+    .inspect-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      margin-bottom: var(--space);
+      overflow: hidden;
+    }
+    .inspect-panel h3 {
+      color: var(--primary);
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin: 0 0 16px 0;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .inspect-panel h4 {
+      color: var(--link);
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin: 16px 0 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .inspect-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+      gap: 16px;
+    }
+    .inspect-row:last-child { border-bottom: none; }
+    .inspect-label { color: var(--text-muted); flex-shrink: 0; min-width: 120px; }
+    .inspect-value {
+      color: var(--text);
+      word-break: break-all;
+      text-align: right;
+      font-family: monospace;
+      font-size: 0.8rem;
+    }
+    .inspect-value .addr { color: var(--link); font-weight: 600; }
+    .inspect-value .opreturn { color: var(--text-muted); }
+    .inspect-stack {
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      margin: 10px 0;
+      font-family: monospace;
+      font-size: 0.8rem;
+      line-height: 1.65;
+    }
+    .inspect-stack-item {
+      display: block;
+      padding: 4px 0;
+      border-left: 3px solid var(--border);
+      padding-left: 12px;
+      margin: 4px 0;
+    }
+    .inspect-stack-item .idx { color: var(--text-muted); margin-right: 10px; }
+    .inspect-opcode {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      margin: 2px 4px 2px 0;
+    }
+    .inspect-opcode.push { background: rgba(94, 196, 176, 0.15); color: var(--link); }
+    .inspect-opcode.flow { background: rgba(245, 176, 66, 0.15); color: var(--accent); }
+    .inspect-opcode.crypto { background: rgba(196, 136, 255, 0.15); color: #c88fff; }
+    .inspect-opcode.stack { background: rgba(136, 136, 255, 0.15); color: #8888ff; }
+    .inspect-opcode.other { background: var(--bg-elevated); color: var(--text-muted); }
+    .inspect-script-type {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-right: 8px;
+    }
+    .inspect-script-type.p2pkh { background: var(--success-bg); color: #4ade80; }
+    .inspect-script-type.p2sh { background: rgba(94, 196, 176, 0.15); color: var(--link); }
+    .inspect-script-type.p2wpkh { background: rgba(196, 136, 255, 0.15); color: #c88fff; }
+    .inspect-script-type.p2wsh { background: rgba(245, 176, 66, 0.15); color: var(--accent); }
+    .inspect-script-type.p2tr { background: rgba(136, 136, 255, 0.15); color: #8888ff; }
+    .inspect-script-type.multisig { background: rgba(245, 176, 66, 0.2); color: var(--accent); }
+    .inspect-script-type.opreturn { background: var(--bg-elevated); color: var(--text-muted); }
+    .inspect-script-type.unknown { background: var(--bg-elevated); color: var(--text-muted); }
+    .inspect-output-role {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-left: 10px;
+    }
+    .inspect-output-role.change { background: var(--success-bg); color: #4ade80; }
+    .inspect-output-role.payment { background: rgba(94, 196, 176, 0.15); color: var(--link); }
+    .inspect-sighash { padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: var(--error-bg); color: #f87171; }
+    .inspect-collapse {
+      cursor: pointer;
+      user-select: none;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 10px;
+      transition: color 0.2s;
+    }
+    .inspect-collapse:hover { color: var(--primary); }
+    .inspect-collapse .arrow { display: inline-block; margin-right: 8px; transition: transform 0.2s; }
+    .inspect-collapse.open .arrow { transform: rotate(90deg); }
+    .inspect-body { display: none; padding-top: 10px; }
+    .inspect-body.open { display: block; }
+    .inspect-hex { font-size: 0.75rem; color: var(--text-muted); word-break: break-all; }
+    .inspect-error {
+      color: #f87171;
+      padding: 16px 20px;
+      background: var(--error-bg);
+      border: 1px solid rgba(201, 74, 74, 0.35);
+      border-radius: var(--radius-sm);
+      margin: var(--space) 0;
+    }
+    #inspect-result { max-height: 70vh; overflow-y: auto; }
+    #inspect-result::-webkit-scrollbar { width: 8px; }
+    #inspect-result::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* --- Mobile --- */
+    @media (max-width: 768px) {
+      body { background: var(--bg-deep); }
+      .container { padding: 16px 16px 40px; }
+      h2.page-title { font-size: 1.35rem; margin-bottom: 24px; }
+      .info-header { padding: 16px 18px; }
+      .info-body { padding: 0 18px 18px; }
+      .wallet-status { padding: 18px 20px; flex-direction: column; gap: 16px; }
+      .tabs { padding: 4px; margin-bottom: 20px; }
+      .tab { padding: 12px 16px; font-size: 0.85rem; }
+      .upload-area { padding: 24px 20px; }
+      textarea { min-height: 88px; padding: 14px; }
+      .tx-info { padding: 18px 20px; }
+      .tx-info-row { font-size: 0.85rem; }
+      .diagram { gap: 12px; }
+      .diagram-box { padding: 16px 12px; }
+      .diagram-value { font-size: 1.35rem; }
+      .toast-container { top: auto; bottom: 20px; left: 16px; right: 16px; max-width: none; }
+      button { width: 100%; margin-top: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Toast container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <div class="container">
+    <h2 class="page-title">Bitcoin PSBT Signing Tool</h2>
+
+    <!-- Collapsible Info Section -->
+    <div class="info-section">
+      <div class="info-header" onclick="toggleInfo()">
+        <span class="info-header-title">How to Use This Tool</span>
+        <span class="info-toggle" id="info-toggle-icon">&#9660;</span>
+      </div>
+      <div class="info-body" id="info-body">
+        <div class="lang-selector">
+          <button class="lang-btn active" onclick="setLanguage('en'); document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active')); this.classList.add('active');">English</button>
+          <button class="lang-btn" onclick="setLanguage('ru'); document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active')); this.classList.add('active');">Русский</button>
+          <button class="lang-btn" onclick="setLanguage('zh'); document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active')); this.classList.add('active');">中文</button>
+        </div>
+        <div id="info-content-en">
+          <div class="info-text">
+            This signing tool works with <strong>TLB_Pocket_Minter</strong>, a Telegram bot for minting BRC-20 tokens and managing Bitcoin transactions.
+          </div>
+          <div class="info-title" style="margin-top: 12px; font-size: 14px;">Steps</div>
+          <div class="info-text"><strong>1.</strong> Upload the JSON file from the bot, or paste PSBT directly (hex or base64).</div>
+          <div class="info-text"><strong>2.</strong> Connect your UniSat wallet (extension or mobile app).</div>
+          <div class="info-text"><strong>3.</strong> Review transaction details, sign, and broadcast.</div>
+          <div class="info-warning">
+            <strong>For Airdrops:</strong> Sign with the <strong>source address</strong> (holds the BRC-20 inscriptions), not your minting address.
+          </div>
+        </div>
+        <div id="info-content-ru" style="display: none;">
+          <div class="info-text">
+            Этот инструмент работает с ботом <strong>TLB_Pocket_Minter</strong> в Telegram для минтинга токенов BRC-20 и управления транзакциями Bitcoin.
+          </div>
+          <div class="info-title" style="margin-top: 12px; font-size: 14px;">Шаги</div>
+          <div class="info-text"><strong>1.</strong> Загрузите JSON файл от бота или вставьте PSBT напрямую (hex или base64).</div>
+          <div class="info-text"><strong>2.</strong> Подключите кошелек UniSat (расширение или мобильное приложение).</div>
+          <div class="info-text"><strong>3.</strong> Просмотрите детали, подпишите и отправьте транзакцию.</div>
+          <div class="info-warning">
+            <strong>Для аирдропов:</strong> Подписывайте <strong>исходным адресом</strong> (содержит BRC-20 инскрипции), а не адресом для минта.
+          </div>
+        </div>
+        <div id="info-content-zh" style="display: none;">
+          <div class="info-text">
+            此签名工具与 <strong>TLB_Pocket_Minter</strong> Telegram 机器人配合使用，用于铸造 BRC-20 代币和管理 Bitcoin 交易。
+          </div>
+          <div class="info-title" style="margin-top: 12px; font-size: 14px;">步骤</div>
+          <div class="info-text"><strong>1.</strong> 上传机器人发送的 JSON 文件，或直接粘贴 PSBT（hex 或 base64）。</div>
+          <div class="info-text"><strong>2.</strong> 连接 UniSat 钱包（浏览器扩展或手机应用）。</div>
+          <div class="info-text"><strong>3.</strong> 查看交易详情，签名并广播。</div>
+          <div class="info-warning">
+            <strong>空投提示：</strong> 请使用<strong>源地址</strong>（持有 BRC-20 铭文的地址）签名，而非铸造地址。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Environment Banner -->
+    <div id="env-banner"></div>
+
+    <!-- Wallet Status -->
+    <div class="wallet-status" id="wallet-status">
+      <div id="wallet-badge-area">
+        <span class="wallet-badge disconnected" id="wallet-badge">
+          <span class="dot"></span> Not Connected
+        </span>
+      </div>
+      <div id="wallet-actions">
+        <button onclick="connectWallet()" id="connect-btn">Connect UniSat Wallet</button>
+      </div>
+      <div id="wallet-info" style="display:none;">
+        <div class="wallet-info-text">
+          <div><span class="addr" id="wallet-address"></span></div>
+          <div class="wallet-info-row"><span style="color:#888;">Pubkey:</span> <span class="pubk" id="wallet-pubkey" title="Click to copy"></span></div>
+          <div class="wallet-info-row"><span style="color:#888;">Balance:</span> <span class="balance" id="wallet-balance">—</span> <button type="button" class="secondary" onclick="refreshWalletBalance()" style="margin:0;padding:4px 8px;font-size:11px;">Refresh</button></div>
+        </div>
+      </div>
+      <!-- Mobile wallet options (shown when no extension) -->
+      <div class="mobile-wallet-options" id="mobile-wallet-options">
+        <div class="mobile-wallet-btn" onclick="openInUnisatApp()">
+          <span class="icon">&#128279;</span>
+          <span>Open in UniSat App<br><small style="color:#888;">Best experience - full wallet features</small></span>
+        </div>
+        <div class="mobile-wallet-btn" onclick="connectViaDeeplink()">
+          <span class="icon">&#128274;</span>
+          <span>Connect via UniSat<br><small style="color:#888;">Sign in app, return here</small></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="tab-sign">Sign</button>
+      <button class="tab" data-tab="tab-push">Broadcast</button>
+      <button class="tab" data-tab="tab-inspect">Inspect PSBT</button>
+      <button class="tab" data-tab="tab-signmsg">Sign Message</button>
+    </div>
+
+    <!-- SIGN TAB -->
+    <div id="tab-sign" class="tab-content active">
+      <!-- File Upload -->
+      <div class="upload-area" id="upload-area">
+        <div class="upload-icon">&#128193;</div>
+        <div class="upload-text">Click or drag & drop file</div>
+        <div class="upload-hint">.json or .psbt from TLB_Pocket_Minter</div>
+        <input type="file" id="file-input" accept=".json,.psbt" />
+      </div>
+
+      <div class="divider">OR</div>
+
+      <!-- Transaction Info Display -->
+      <div id="tx-info-container" style="display: none;"></div>
+
+      <label for="psbt-hex-all">
+        PSBT Data
+        <span class="format-badge unknown" id="format-badge" style="display:none;"></span>
+      </label>
+      <textarea id="psbt-hex-all" rows="4" placeholder="Paste PSBT here (hex or base64) or upload file above..."></textarea>
+
+      <label for="address-all">Address (optional):</label>
+      <input id="address-all" type="text" placeholder="Auto-detected from wallet" />
+
+      <!-- Desktop sign button -->
+      <button onclick="signPsbtAll()" id="sign-btn-desktop">
+        Sign Transaction
+      </button>
+
+      <!-- Mobile sign section (deeplink) -->
+      <div class="mobile-sign-section" id="mobile-sign-section">
+        <h4>Sign Transaction</h4>
+        <div class="mobile-sign-actions">
+          <button class="deeplink-btn" onclick="signViaDeeplink()" id="deeplink-sign-btn">
+            &#9997; Sign with UniSat App
+          </button>
+          <div class="or-divider">or paste signed PSBT below</div>
+          <div class="paste-signed-area">
+            <textarea id="signed-psbt-paste" rows="3" placeholder="Paste the signed PSBT hex from your wallet here..."></textarea>
+            <button class="secondary" onclick="useManualSignedPsbt()" style="margin-top:4px;">
+              Use Pasted Signed PSBT
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <label for="result-all">Signed PSBT:</label>
+      <textarea id="result-all" readonly rows="3" placeholder="Signed PSBT will appear here"></textarea>
+    </div>
+
+    <!-- BROADCAST TAB -->
+    <div id="tab-push" class="tab-content">
+      <label for="psbt-hex-push">Signed PSBT / Raw TX Hex:</label>
+      <textarea id="psbt-hex-push" rows="4" placeholder="Paste signed PSBT or raw transaction hex here..."></textarea>
+
+      <label style="margin-top:12px;">Broadcast to chain:</label>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; margin-bottom:8px;">
+        <button type="button" class="secondary" id="broadcast-chain-fb" onclick="setBroadcastChain('fb')" style="min-width:140px;">Fractal Bitcoin (FB)</button>
+        <button type="button" class="secondary" id="broadcast-chain-btc" onclick="setBroadcastChain('btc')" style="min-width:140px;">Bitcoin (BTC)</button>
+      </div>
+      <p style="color:#888;font-size:12px;margin:0 0 8px 0;">PSBTs are chain-agnostic; choose the mempool/chain you signed for.</p>
+
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+        <button onclick="pushViaExtension()" id="push-ext-btn" style="flex:1; min-width:140px;">
+          Broadcast via UniSat
+        </button>
+        <button onclick="pushViaMempool()" class="secondary" id="push-mempool-btn" style="flex:1; min-width:140px;">
+          Broadcast via Mempool
+        </button>
+      </div>
+
+      <div id="broadcast-result" style="display:none;"></div>
+    </div>
+
+    <!-- INSPECT TAB -->
+    <div id="tab-inspect" class="tab-content">
+      <div class="inspect-panel">
+        <h3>&#128269; Decode any PSBT</h3>
+        <p style="color:#aaa;font-size:12px;margin:0 0 12px 0;">Paste a PSBT (hex or base64) to decode and inspect: inputs, outputs, scripts, opcodes, sighash, BIP32 paths, and more. Fully client-side — no data sent to any server.</p>
+        <label for="psbt-inspect-input">PSBT (hex or base64)</label>
+        <textarea id="psbt-inspect-input" rows="4" placeholder="Paste PSBT here... or use current PSBT from Sign tab"></textarea>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+          <button onclick="runInspect()">Decode &amp; Inspect</button>
+          <button class="secondary" onclick="useCurrentPsbtInspect()">Use current PSBT from Sign tab</button>
+        </div>
+      </div>
+      <div id="inspect-result"></div>
+    </div>
+
+    <!-- SIGN MESSAGE TAB (BIP-322) -->
+    <div id="tab-signmsg" class="tab-content">
+      <div class="inspect-panel">
+        <h3>&#9997; BIP-322 Message Signing</h3>
+        <p style="color:#aaa;font-size:12px;margin:0 0 12px 0;">Sign any message with your connected wallet. Output is a BIP-322 simple signature (base64), usable for verification by any BIP-322-compatible verifier.</p>
+        <label for="signmsg-message">Message to sign</label>
+        <textarea id="signmsg-message" rows="4" placeholder="Enter any message to sign..."></textarea>
+        <button onclick="signMessageBip322()" id="signmsg-btn">Sign Message (BIP-322)</button>
+        <label for="signmsg-result" style="margin-top:14px;">Signature (base64)</label>
+        <textarea id="signmsg-result" readonly rows="4" placeholder="BIP-322 signature will appear here (e.g. AkgwRQIhAI/...)"></textarea>
+      </div>
+    </div>
+  </div>
+
+<script>
+    // ===== CONSTANTS =====
+    const CALLBACK_URL = 'https://thelonelybits.org/signer.html';
+    const MEMPOOL_APIS = {
+      fb: { api: 'https://mempool.fractalbitcoin.io/api/tx', base: 'https://mempool.fractalbitcoin.io', label: 'Fractal Bitcoin (FB)' },
+      btc: { api: 'https://mempool.space/api/tx', base: 'https://mempool.space', label: 'Bitcoin (BTC)' }
+    };
+    let broadcastChain = 'fb';
+    const APP_NAME = 'TLB_Signer';
+
+    // ===== STATE =====
+    let currentAddress = "";
+    let currentPubkey = "";
+    let currentPsbt = null;
+    let currentPsbtFormat = null; // 'base64' | 'hex'
+    let jsonUploaded = false;
+    let isMobile = false;
+    let hasExtension = false;
+
+    // ===== ENVIRONMENT DETECTION =====
+    function applyEnvironment() {
+      const banner = document.getElementById('env-banner');
+      const connectBtn = document.getElementById('connect-btn');
+      const mobileOptions = document.getElementById('mobile-wallet-options');
+      const signDesktop = document.getElementById('sign-btn-desktop');
+      const signMobile = document.getElementById('mobile-sign-section');
+      const pushExtBtn = document.getElementById('push-ext-btn');
+
+      if (hasExtension) {
+        // Extension available (desktop OR UniSat DApp browser)
+        banner.innerHTML = '';
+        banner.className = 'env-banner';
+        connectBtn.style.display = '';
+        mobileOptions.classList.remove('show');
+        signDesktop.style.display = '';
+        signMobile.classList.remove('show');
+        pushExtBtn.style.display = '';
+      } else if (isMobile) {
+        // Mobile without extension
+        banner.className = 'env-banner mobile-no-ext';
+        banner.innerHTML = '&#128241; <strong>Mobile detected.</strong> For the best experience, open this page in the <strong>UniSat App</strong> built-in browser. Or use the options below to sign via deeplink.';
+        connectBtn.style.display = 'none';
+        mobileOptions.classList.add('show');
+        signDesktop.style.display = 'none';
+        signMobile.classList.add('show');
+        pushExtBtn.style.display = 'none';
+      } else {
+        // Desktop without extension
+        banner.className = 'env-banner desktop-no-ext';
+        banner.innerHTML = '&#128268; <strong>UniSat wallet not detected.</strong> <a href="https://chrome.google.com/webstore/detail/unisat/ppbibelpcjmhbdihakflkdcoccbgbkpo" target="_blank">Install the UniSat extension</a> to sign transactions, or use the Mempool broadcast option for pre-signed PSBTs.';
+        connectBtn.style.display = 'none';
+        mobileOptions.classList.remove('show');
+        signDesktop.style.display = 'none';
+        signMobile.classList.remove('show');
+        pushExtBtn.style.display = 'none';
+      }
+    }
+
+    // Wait for extension to inject (it can take up to ~1s after DOM ready)
+    async function detectEnvironment() {
+      isMobile = /Mobi|Android|iPhone|iPad|iPod|webOS|BlackBerry|Opera Mini|IEMobile/i.test(navigator.userAgent);
+      hasExtension = typeof window.unisat !== 'undefined' && typeof window.unisat.signPsbt === 'function';
+
+      // On mobile, the browser extension won't exist -- apply immediately
+      if (isMobile) {
+        applyEnvironment();
+        return;
+      }
+
+      // Desktop: extension found already, apply immediately
+      if (hasExtension) {
+        applyEnvironment();
+        return;
+      }
+
+      // Desktop: extension not found yet -- retry a few times
+      // Chrome extensions inject scripts asynchronously after page load
+      const delays = [150, 300, 500, 800];
+      for (const delay of delays) {
+        await new Promise(r => setTimeout(r, delay));
+        hasExtension = typeof window.unisat !== 'undefined' && typeof window.unisat.signPsbt === 'function';
+        if (hasExtension) {
+          applyEnvironment();
+          return;
+        }
+      }
+
+      // After all retries, apply with whatever we have
+      applyEnvironment();
+    }
+
+    // ===== TOAST NOTIFICATIONS =====
+    function showToast(message, type = 'info', duration = 4000) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast ' + type;
+      const icons = { info: '&#8505;', success: '&#10004;', error: '&#10006;', warning: '&#9888;' };
+      toast.innerHTML = '<span>' + (icons[type] || '') + '</span><span style="flex:1;">' + message + '</span><span class="toast-close" onclick="this.parentElement.remove()">&#10005;</span>';
+      container.appendChild(toast);
+      if (duration > 0) {
+        setTimeout(() => { if (toast.parentElement) toast.remove(); }, duration);
+      }
+    }
+
+    // ===== INFO SECTION TOGGLE =====
+    function toggleInfo() {
+      const body = document.getElementById('info-body');
+      const icon = document.getElementById('info-toggle-icon');
+      const isOpen = body.classList.toggle('open');
+      icon.classList.toggle('open', isOpen);
+    }
+
+    // ===== LANGUAGE =====
+    function setLanguage(lang) {
+      document.getElementById('info-content-en').style.display = lang === 'en' ? 'block' : 'none';
+      document.getElementById('info-content-ru').style.display = lang === 'ru' ? 'block' : 'none';
+      document.getElementById('info-content-zh').style.display = lang === 'zh' ? 'block' : 'none';
+      localStorage.setItem('tlb_signer_lang', lang);
+    }
+
+    // ===== TAB LOGIC =====
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.getAttribute('data-tab')).classList.add('active');
+      };
+    });
+
+    // ===== PSBT FORMAT DETECTION =====
+    function detectPsbtFormat(data) {
+      if (!data || !data.trim()) return null;
+      data = data.trim();
+
+      // Hex: starts with 70736274ff (PSBT magic bytes in hex)
+      if (/^70736274ff/i.test(data) && /^[0-9a-fA-F]+$/.test(data)) {
+        return 'hex';
+      }
+
+      // Base64: starts with cHNi (base64 of "psb") or contains only base64 chars
+      if (/^cHNi/.test(data) || /^[A-Za-z0-9+/]+=*$/.test(data)) {
+        try {
+          const decoded = atob(data);
+          // Check for PSBT magic: 0x70 0x73 0x62 0x74 0xFF
+          if (decoded.charCodeAt(0) === 0x70 && decoded.charCodeAt(1) === 0x73 &&
+              decoded.charCodeAt(2) === 0x62 && decoded.charCodeAt(3) === 0x74 &&
+              decoded.charCodeAt(4) === 0xFF) {
+            return 'base64';
+          }
+        } catch (e) {}
+      }
+
+      // Try hex without the magic prefix (might be a signed/finalized PSBT)
+      if (/^[0-9a-fA-F]+$/.test(data) && data.length > 100) {
+        return 'hex';
+      }
+
+      // Try base64 anyway
+      if (/^[A-Za-z0-9+/]+=*$/.test(data) && data.length > 50) {
+        return 'base64';
+      }
+
+      return 'unknown';
+    }
+
+    function normalizePsbt(data) {
+      // Returns base64 format (what the decode API expects)
+      if (!data || !data.trim()) return null;
+      data = data.trim();
+      const format = detectPsbtFormat(data);
+
+      if (format === 'base64') {
+        return { psbt: data, format: 'base64' };
+      } else if (format === 'hex') {
+        // Convert hex to base64
+        try {
+          const bytes = new Uint8Array(data.match(/.{1,2}/g).map(b => parseInt(b, 16)));
+          const binary = String.fromCharCode(...bytes);
+          return { psbt: btoa(binary), format: 'hex' };
+        } catch (e) {
+          return { psbt: data, format: 'hex' };
+        }
+      }
+      // Unknown - try as-is
+      return { psbt: data, format: 'unknown' };
+    }
+
+    function getPsbtHex(data) {
+      // Returns hex format (what UniSat signPsbt expects)
+      if (!data || !data.trim()) return null;
+      data = data.trim();
+      const format = detectPsbtFormat(data);
+
+      if (format === 'hex') {
+        return data;
+      } else if (format === 'base64') {
+        try {
+          const binary = atob(data);
+          return Array.from(binary, c => ('0' + c.charCodeAt(0).toString(16)).slice(-2)).join('');
+        } catch (e) {
+          return data;
+        }
+      }
+      return data;
+    }
+
+    // ===== BIP-322 MESSAGE SIGNING =====
+    const BIP322_TAG = 'BIP0322-signed-message';
+    function stringToBytes(s) { return new Uint8Array(Array.from(s, c => c.charCodeAt(0))); }
+    function concatBytes() { const arr = []; for (let i = 0; i < arguments.length; i++) arr.push(...new Uint8Array(arguments[i])); return new Uint8Array(arr); }
+    async function sha256Async(bytes) {
+      const buf = await crypto.subtle.digest('SHA-256', bytes);
+      return new Uint8Array(buf);
+    }
+    function sha256Sync(bytes) {
+      let h = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+      const k = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+      let ml = bytes.length * 8; const data = new Uint8Array(bytes.length + 64); data.set(bytes); data[bytes.length] = 0x80;
+      const n = data.length + (64 - (data.length + 8) % 64); const padded = new Uint8Array(n); padded.set(data); new DataView(padded.buffer).setUint32(padded.length - 4, ml >>> 0, false);
+      for (let i = 0; i < padded.length; i += 64) {
+        const w = new Uint32Array(64); for (let t = 0; t < 16; t++) w[t] = (padded[i+t*4]<<24)|(padded[i+t*4+1]<<16)|(padded[i+t*4+2]<<8)|padded[i+t*4+3];
+        for (let t = 16; t < 64; t++) { const s0 = (w[t-15]>>>7)^(w[t-15]>>>18)^(w[t-15]>>>3); const s1 = (w[t-2]>>>17)^(w[t-2]>>>19)^(w[t-2]>>>10); w[t] = (w[t-16]+s0+w[t-7]+s1)>>>0; }
+        let [aa,bb,cc,dd,ee,ff,gg,hh] = h;
+        for (let t = 0; t < 64; t++) { const S1 = (ee>>>6)^(ee>>>11)^(ee>>>25); const ch = (ee&ff)^((~ee)&gg); const t1 = (hh+S1+ch+k[t]+w[t])>>>0; const S0 = (aa>>>2)^(aa>>>13)^(aa>>>22); const maj = (aa&bb)^(aa&cc)^(bb&cc); const t2 = (S0+maj)>>>0; hh=gg; gg=ff; ff=ee; ee=(dd+t1)>>>0; dd=cc; cc=bb; bb=aa; aa=(t1+t2)>>>0; }
+        h = [(h[0]+aa)>>>0,(h[1]+bb)>>>0,(h[2]+cc)>>>0,(h[3]+dd)>>>0,(h[4]+ee)>>>0,(h[5]+ff)>>>0,(h[6]+gg)>>>0,(h[7]+hh)>>>0];
+      }
+      const out = new Uint8Array(32); for (let i = 0; i < 8; i++) { out[i*4]=(h[i]>>>24)&0xff; out[i*4+1]=(h[i]>>>16)&0xff; out[i*4+2]=(h[i]>>>8)&0xff; out[i*4+3]=h[i]&0xff; } return out;
+    }
+    function ripemd160(bytes) {
+      const K = [0x00000000,0x5a827999,0x6ed9eba1,0x8f1bbcdc,0xa953fd4e], r = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,7,4,13,1,10,6,15,3,12,0,9,5,2,14,11,8,3,10,14,4,9,15,8,1,2,7,0,6,13,11,5,12], rp = [5,14,7,0,9,2,11,4,13,6,15,8,1,10,3,12,6,11,3,7,0,13,5,10,14,15,8,12,4,9,1,2];
+      let h0=0x67452301,h1=0xefcdab89,h2=0x98badcfe,h3=0x10325476,h4=0xc3d2e1f0, ml=bytes.length*8;
+      const b = new Uint8Array(bytes.length+72); b.set(bytes); b[bytes.length]=0x80; const n = b.length+((64-(b.length+8)%64)%64); const pad = new Uint8Array(n); pad.set(b); new DataView(pad.buffer).setUint32(pad.length-4, ml>>>0, true);
+      for (let off=0; off<pad.length; off+=64) {
+        const X = new Uint32Array(16); for (let i=0;i<16;i++) X[i] = (pad[off+i*4+3]<<24)|(pad[off+i*4+2]<<16)|(pad[off+i*4+1]<<8)|pad[off+i*4];
+        let al=h0,bl=h1,cl=h2,dl=h3,el=h4;
+        for (let j=0;j<80;j++) { const f = j<16 ? (bl^cl^dl) : j<32 ? (bl&cl)|(~bl&dl) : j<48 ? (bl|~cl)^dl : j<64 ? (bl&dl)|(cl&~dl) : bl^(cl|~dl); const t = (al+f+X[r[j]]+K[j/16|0])>>>0; const s = [11,14,15,12,5,8,7,9,11,13,14,15,6,7,9,8,7,6,8,13,11,9,7,15,7,12,15,9,11,7,13,12,11,13,6,7,14,9,13,15,14,8,13,6,5,12,7,5,11,12,14,15,14,15,9,8,9,14,5,6,8,6,5,12,9,15,5,11,6,8,13,12,5,12,13,14,11,8,5,6][j]; al=el; el=dl; dl=(cl<<10)|(cl>>>22); cl=bl; bl=((t<<s)|(t>>>(32-s)))>>>0; }
+        for (let j=0;j<80;j++) { const f = j<16 ? (bl^cl^dl) : j<32 ? (bl&cl)|(~bl&dl) : j<48 ? (bl|~cl)^dl : j<64 ? (bl&dl)|(cl&~dl) : bl^(cl|~dl); const t = (al+f+X[rp[j]]+K[(79-j)/16|0])>>>0; const s = [8,9,9,11,13,15,15,5,7,7,8,11,14,14,12,6,9,13,15,7,12,8,9,11,7,7,12,7,6,15,13,11,9,7,15,11,8,6,6,14,12,13,5,14,13,13,7,5,15,5,8,11,14,14,6,14,6,9,12,9,12,5,15,8,8,5,12,9,12,5,14,6,8,13,6,5,15,13,11,11][j]; al=el; el=dl; dl=(cl<<10)|(cl>>>22); cl=bl; bl=((t<<s)|(t>>>(32-s)))>>>0; }
+        h0=(h0+al)>>>0; h1=(h1+bl)>>>0; h2=(h2+cl)>>>0; h3=(h3+dl)>>>0; h4=(h4+el)>>>0;
+      }
+      const out = new Uint8Array(20); for (let i=0;i<5;i++) { const v = [h0,h1,h2,h3,h4][i]; out[i*4]=v&0xff; out[i*4+1]=(v>>>8)&0xff; out[i*4+2]=(v>>>16)&0xff; out[i*4+3]=(v>>>24)&0xff; } return out;
+    }
+    async function hash160Async(bytes) { const h = await sha256Async(bytes); return ripemd160(h); }
+    async function bip322MessageHash(message) {
+      const tagBytes = stringToBytes(BIP322_TAG);
+      const tagHash = await sha256Async(tagBytes);
+      const msgBytes = stringToBytes(message);
+      const combined = concatBytes(tagHash, tagHash, msgBytes);
+      return await sha256Async(combined);
+    }
+    function p2wpkhScriptPubKeyFromPubkey(pubkeyBytes) {
+      const h160 = ripemd160(sha256Sync(pubkeyBytes));
+      return concatBytes(new Uint8Array([0x00, 0x14]), h160);
+    }
+    function buildToSpend(messageHash, scriptPubKey) {
+      const parts = [];
+      parts.push(0, 0, 0, 0);
+      parts.push(1);
+      for (let i = 0; i < 32; i++) parts.push(0);
+      parts.push(0xff, 0xff, 0xff, 0xff);
+      parts.push(34, 0x00, 0x20);
+      for (let i = 0; i < 32; i++) parts.push(messageHash[i]);
+      parts.push(0, 0, 0, 0);
+      parts.push(1);
+      parts.push(0, 0, 0, 0, 0, 0, 0, 0);
+      parts.push(scriptPubKey.length);
+      for (let i = 0; i < scriptPubKey.length; i++) parts.push(scriptPubKey[i]);
+      parts.push(0, 0, 0, 0);
+      return new Uint8Array(parts);
+    }
+    function getTxid(serialized) {
+      const h = sha256Sync(sha256Sync(serialized));
+      return new Uint8Array(Array.from(h).reverse());
+    }
+    function buildToSignUnsigned(toSpendTxid) {
+      const parts = [];
+      parts.push(0, 0, 0, 0);
+      parts.push(1);
+      for (let i = 0; i < 32; i++) parts.push(toSpendTxid[i]);
+      parts.push(0, 0, 0, 0);
+      parts.push(0);
+      parts.push(0, 0, 0, 0);
+      parts.push(1);
+      parts.push(0, 0, 0, 0, 0, 0, 0, 0);
+      parts.push(1, 0x6a);
+      parts.push(0, 0, 0, 0);
+      return new Uint8Array(parts);
+    }
+    function buildBip322Psbt(toSignSerialized, scriptPubKey) {
+      const magic = [0x70, 0x73, 0x62, 0x74, 0xff];
+      const globalKey = [0x00];
+      const globalVal = toSignSerialized;
+      const sep = [0x00];
+      const witnessUtxo = concatBytes(new Uint8Array([0,0,0,0,0,0,0,0]), new Uint8Array([scriptPubKey.length]), scriptPubKey);
+      const inKey = [0x01];
+      const inVal = witnessUtxo;
+      const parts = [];
+      parts.push(...magic);
+      parts.push(...compactSizeBytes(1));
+      parts.push(...globalKey);
+      parts.push(...compactSizeBytes(globalVal.length));
+      parts.push(...globalVal);
+      parts.push(...sep);
+      parts.push(...compactSizeBytes(inKey.length));
+      parts.push(...inKey);
+      parts.push(...compactSizeBytes(inVal.length));
+      parts.push(...inVal);
+      parts.push(...sep);
+      return new Uint8Array(parts);
+    }
+    function extractWitnessFromSignedPsbt(psbtHex) {
+      const bytes = hexToBytes(psbtHex);
+      if (bytes.length < 6 || bytes[0] !== 0x70 || bytes[1] !== 0x73 || bytes[2] !== 0x62 || bytes[3] !== 0x74 || bytes[4] !== 0xff) throw new Error('Invalid PSBT');
+      let pos = 5;
+      while (pos < bytes.length) {
+        const kl = readCompactSize(bytes, pos); pos = kl.next;
+        if (kl.size === 0) break;
+        pos += kl.size;
+        const vl = readCompactSize(bytes, pos); pos = vl.next;
+        pos += vl.size;
+      }
+      while (pos < bytes.length) {
+        const kl = readCompactSize(bytes, pos); pos = kl.next;
+        if (kl.size === 0) break;
+        const kt = bytes[pos];
+        pos += kl.size;
+        const vl = readCompactSize(bytes, pos); pos = vl.next;
+        if (kt === 0x08 && kl.size === 1) return bytes.slice(pos, pos + vl.size);
+        pos += vl.size;
+      }
+      throw new Error('No final script witness in signed PSBT');
+    }
+    function uint8ArrayToBase64(u) {
+      let binary = ''; for (let i = 0; i < u.length; i++) binary += String.fromCharCode(u[i]);
+      return btoa(binary);
+    }
+    async function signMessageBip322() {
+      const msgEl = document.getElementById('signmsg-message');
+      const resultEl = document.getElementById('signmsg-result');
+      const btn = document.getElementById('signmsg-btn');
+      const message = (msgEl && msgEl.value) ? msgEl.value : '';
+      if (!message.trim()) { showToast('Enter a message to sign.', 'warning'); return; }
+      if (!currentAddress) { showToast('Connect your wallet first.', 'warning'); return; }
+      if (!hasExtension || typeof window.unisat.signMessage !== 'function') { showToast('UniSat wallet with signMessage is required.', 'error'); return; }
+      btn.disabled = true;
+      if (resultEl) resultEl.value = '';
+      try {
+        const sigBase64 = await window.unisat.signMessage(message, 'bip322-simple');
+        if (resultEl) resultEl.value = sigBase64;
+        showToast('Message signed. BIP-322 simple signature in output.', 'success');
+      } catch (e) {
+        showToast('Sign failed: ' + (e && e.message ? e.message : String(e)), 'error');
+        if (resultEl) resultEl.value = '';
+        console.error('BIP-322 sign error:', e);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // ===== PSBT → RAW TX EXTRACTION =====
+    // Extracts the finalized raw transaction from a signed/finalized PSBT
+    // Handles SegWit (P2WPKH, P2WSH, P2TR) and legacy inputs
+
+    function hexToBytes(hex) {
+      const bytes = new Uint8Array(hex.length / 2);
+      for (let i = 0; i < hex.length; i += 2) {
+        bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+      }
+      return bytes;
+    }
+
+    function bytesToHex(bytes) {
+      return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function readCompactSize(bytes, offset) {
+      const first = bytes[offset];
+      if (first < 0xfd) return { size: first, next: offset + 1 };
+      if (first === 0xfd) return { size: bytes[offset+1] | (bytes[offset+2] << 8), next: offset + 3 };
+      if (first === 0xfe) return {
+        size: (bytes[offset+1] | (bytes[offset+2] << 8) | (bytes[offset+3] << 16) | ((bytes[offset+4] & 0x7f) << 24)) >>> 0,
+        next: offset + 5
+      };
+      throw new Error('64-bit compact size not supported');
+    }
+
+    function compactSizeBytes(value) {
+      if (value < 0xfd) return [value];
+      if (value <= 0xffff) return [0xfd, value & 0xff, (value >> 8) & 0xff];
+      return [0xfe, value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, (value >> 24) & 0xff];
+    }
+
+    function extractRawTxFromPsbt(psbtHex) {
+      const bytes = hexToBytes(psbtHex);
+
+      // Verify PSBT magic: 70736274ff
+      if (bytes[0] !== 0x70 || bytes[1] !== 0x73 || bytes[2] !== 0x62 ||
+          bytes[3] !== 0x74 || bytes[4] !== 0xff) {
+        throw new Error('Invalid PSBT: wrong magic bytes');
+      }
+
+      let pos = 5;
+
+      // === Parse Global Map ===
+      let unsignedTx = null;
+      while (pos < bytes.length) {
+        const kl = readCompactSize(bytes, pos); pos = kl.next;
+        if (kl.size === 0) break; // end-of-map separator
+        const keyType = bytes[pos];
+        pos += kl.size; // skip key bytes
+        const vl = readCompactSize(bytes, pos); pos = vl.next;
+        if (keyType === 0x00 && kl.size === 1) {
+          unsignedTx = bytes.slice(pos, pos + vl.size);
+        }
+        pos += vl.size;
+      }
+
+      if (!unsignedTx) throw new Error('No unsigned transaction found in PSBT global map');
+
+      // === Parse the Unsigned Transaction structure ===
+      let tp = 0;
+      const version = unsignedTx.slice(0, 4); tp = 4;
+
+      const ic = readCompactSize(unsignedTx, tp); tp = ic.next;
+      const numInputs = ic.size;
+
+      const inputParts = []; // { prevout: 36 bytes, sequence: 4 bytes }
+      for (let i = 0; i < numInputs; i++) {
+        const prevout = unsignedTx.slice(tp, tp + 36); tp += 36;
+        const ssLen = readCompactSize(unsignedTx, tp); tp = ssLen.next;
+        tp += ssLen.size; // skip scriptSig (should be empty in unsigned tx)
+        const seq = unsignedTx.slice(tp, tp + 4); tp += 4;
+        inputParts.push({ prevout, sequence: seq });
+      }
+
+      // Capture all output bytes as-is (count + all outputs)
+      const outStart = tp;
+      const oc = readCompactSize(unsignedTx, tp); tp = oc.next;
+      for (let i = 0; i < oc.size; i++) {
+        tp += 8; // value (8 bytes)
+        const spkLen = readCompactSize(unsignedTx, tp); tp = spkLen.next;
+        tp += spkLen.size;
+      }
+      const outputsRaw = unsignedTx.slice(outStart, tp);
+      const locktime = unsignedTx.slice(tp, tp + 4);
+
+      // === Parse Input Maps (get final scriptSig and witness) ===
+      const finalScriptSigs = [];
+      const finalWitnesses = [];
+      for (let i = 0; i < numInputs; i++) {
+        let scriptSig = null, witness = null;
+        while (pos < bytes.length) {
+          const kl = readCompactSize(bytes, pos); pos = kl.next;
+          if (kl.size === 0) break; // end-of-map
+          const keyType = bytes[pos];
+          pos += kl.size;
+          const vl = readCompactSize(bytes, pos); pos = vl.next;
+          if (keyType === 0x07 && kl.size === 1) {
+            scriptSig = bytes.slice(pos, pos + vl.size); // PSBT_IN_FINAL_SCRIPTSIG
+          }
+          if (keyType === 0x08 && kl.size === 1) {
+            witness = bytes.slice(pos, pos + vl.size); // PSBT_IN_FINAL_SCRIPT_WITNESS
+          }
+          pos += vl.size;
+        }
+        finalScriptSigs.push(scriptSig);
+        finalWitnesses.push(witness);
+      }
+
+      // Check that we have finalization data
+      const hasAnyFinal = finalScriptSigs.some(s => s !== null) || finalWitnesses.some(w => w !== null);
+      if (!hasAnyFinal) {
+        throw new Error('PSBT is not finalized (no final scriptSig or witness found). Sign it first.');
+      }
+
+      const hasWitness = finalWitnesses.some(w => w !== null);
+
+      // === Build Raw Transaction ===
+      const parts = [];
+
+      // Version (4 bytes)
+      parts.push(...version);
+
+      // SegWit marker + flag
+      if (hasWitness) {
+        parts.push(0x00, 0x01);
+      }
+
+      // Input count
+      parts.push(...compactSizeBytes(numInputs));
+
+      // Inputs
+      for (let i = 0; i < numInputs; i++) {
+        parts.push(...inputParts[i].prevout); // 36 bytes: txid + vout
+        if (finalScriptSigs[i] && finalScriptSigs[i].length > 0) {
+          parts.push(...compactSizeBytes(finalScriptSigs[i].length));
+          parts.push(...finalScriptSigs[i]);
+        } else {
+          parts.push(0x00); // empty scriptSig
+        }
+        parts.push(...inputParts[i].sequence); // 4 bytes
+      }
+
+      // Outputs (copied as-is including count)
+      parts.push(...outputsRaw);
+
+      // Witness data (if segwit)
+      if (hasWitness) {
+        for (let i = 0; i < numInputs; i++) {
+          if (finalWitnesses[i] && finalWitnesses[i].length > 0) {
+            parts.push(...finalWitnesses[i]); // already formatted: count + items
+          } else {
+            parts.push(0x00); // empty witness stack
+          }
+        }
+      }
+
+      // Locktime (4 bytes)
+      parts.push(...locktime);
+
+      return bytesToHex(new Uint8Array(parts));
+    }
+
+    // ===== FULL PSBT INSPECTOR (client-side, generic) =====
+    const OPCODE_NAMES = {
+      0x00: 'OP_0', 0x51: 'OP_1', 0x52: 'OP_2', 0x53: 'OP_3', 0x54: 'OP_4', 0x55: 'OP_5',
+      0x56: 'OP_6', 0x57: 'OP_7', 0x58: 'OP_8', 0x59: 'OP_9', 0x5a: 'OP_10', 0x5b: 'OP_11',
+      0x5c: 'OP_12', 0x5d: 'OP_13', 0x5e: 'OP_14', 0x5f: 'OP_15', 0x60: 'OP_16',
+      0x61: 'OP_NOP', 0x63: 'OP_IF', 0x64: 'OP_NOTIF', 0x67: 'OP_ELSE', 0x68: 'OP_ENDIF',
+      0x69: 'OP_VERIFY', 0x6a: 'OP_RETURN', 0x6b: 'OP_TOALTSTACK', 0x6c: 'OP_FROMALTSTACK',
+      0x6d: 'OP_2DROP', 0x6e: 'OP_2DUP', 0x6f: 'OP_3DUP', 0x70: 'OP_2OVER', 0x71: 'OP_2ROT',
+      0x72: 'OP_2SWAP', 0x73: 'OP_IFDUP', 0x74: 'OP_DEPTH', 0x75: 'OP_DROP', 0x76: 'OP_DUP',
+      0x77: 'OP_NIP', 0x78: 'OP_OVER', 0x79: 'OP_PICK', 0x7a: 'OP_ROLL', 0x7b: 'OP_ROT',
+      0x7c: 'OP_SWAP', 0x7d: 'OP_TUCK', 0x82: 'OP_SIZE', 0x87: 'OP_EQUAL', 0x88: 'OP_EQUALVERIFY',
+      0x89: 'OP_1ADD', 0x8b: 'OP_1SUB', 0x8c: 'OP_NEGATE', 0x8d: 'OP_ABS', 0x8e: 'OP_NOT',
+      0x8f: 'OP_0NOTEQUAL', 0x90: 'OP_ADD', 0x91: 'OP_SUB', 0x92: 'OP_BOOLAND', 0x93: 'OP_BOOLOR',
+      0x94: 'OP_NUMEQUAL', 0x95: 'OP_NUMEQUALVERIFY', 0x96: 'OP_NUMNOTEQUAL', 0x97: 'OP_LESSTHAN',
+      0x98: 'OP_GREATERTHAN', 0x99: 'OP_LESSTHANOREQUAL', 0x9a: 'OP_GREATERTHANOREQUAL',
+      0x9b: 'OP_MIN', 0x9c: 'OP_MAX', 0x9d: 'OP_WITHIN', 0xa0: 'OP_RIPEMD160', 0xa1: 'OP_SHA1',
+      0xa2: 'OP_SHA256', 0xa3: 'OP_HASH160', 0xa4: 'OP_HASH256', 0xa5: 'OP_CODESEPARATOR',
+      0xa6: 'OP_CHECKSIG', 0xa7: 'OP_CHECKSIGVERIFY', 0xa8: 'OP_CHECKMULTISIG', 0xa9: 'OP_HASH160',
+      0xac: 'OP_CHECKSIG', 0xad: 'OP_CHECKSIGVERIFY', 0xae: 'OP_CHECKMULTISIG', 0xaf: 'OP_CHECKMULTISIGVERIFY',
+      0xb0: 'OP_NOP1', 0xb1: 'OP_CHECKLOCKTIMEVERIFY', 0xb2: 'OP_CHECKSEQUENCEVERIFY', 0xb3: 'OP_NOP4',
+      0xb4: 'OP_NOP5', 0xb5: 'OP_NOP6', 0xb6: 'OP_NOP7', 0xb7: 'OP_NOP8', 0xb8: 'OP_NOP9', 0xb9: 'OP_NOP10',
+      0xba: 'OP_CHECKSIGADD'
+    };
+    const OPCODE_CATEGORY = {
+      push: [0x00, 0x4c, 0x4d, 0x4e],
+      flow: [0x63, 0x64, 0x67, 0x68, 0x69, 0x6a],
+      crypto: [0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xac, 0xad, 0xae, 0xaf, 0xba],
+      stack: [0x6b, 0x6c, 0x6d, 0x6e, 0x6f, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x82, 0x87, 0x88]
+    };
+    function getOpcodeCategory(op) {
+      if (op <= 0x4e || (op >= 0x51 && op <= 0x60)) return 'push';
+      if ([0x63, 0x64, 0x67, 0x68, 0x69, 0x6a].indexOf(op) >= 0) return 'flow';
+      if ([0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa6, 0xa7, 0xa8, 0xa9, 0xac, 0xad, 0xae, 0xaf, 0xba].indexOf(op) >= 0) return 'crypto';
+      if ([0x6b, 0x6c, 0x6d, 0x6e, 0x6f, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x82, 0x87, 0x88].indexOf(op) >= 0) return 'stack';
+      return 'other';
+    }
+    function decodeScript(scriptBytes) {
+      if (!scriptBytes || scriptBytes.length === 0) return { type: 'empty', ops: [] };
+      const ops = [];
+      let i = 0;
+      while (i < scriptBytes.length) {
+        const op = scriptBytes[i];
+        i += 1;
+        if (op > 0 && op < 0x4c) {
+          const data = scriptBytes.slice(i, i + op);
+          i += op;
+          ops.push({ opcode: op, name: 'PUSH(' + op + ')', data: data, category: 'push' });
+          continue;
+        }
+        if (op === 0x4c) {
+          if (i >= scriptBytes.length) break;
+          const len = scriptBytes[i]; i += 1;
+          const data = scriptBytes.slice(i, i + len); i += len;
+          ops.push({ opcode: 0x4c, name: 'OP_PUSHDATA1', data: data, category: 'push' });
+          continue;
+        }
+        if (op === 0x4d) {
+          if (i + 1 >= scriptBytes.length) break;
+          const len = scriptBytes[i] | (scriptBytes[i + 1] << 8); i += 2;
+          const data = scriptBytes.slice(i, i + len); i += len;
+          ops.push({ opcode: 0x4d, name: 'OP_PUSHDATA2', data: data, category: 'push' });
+          continue;
+        }
+        if (op === 0x4e) {
+          if (i + 3 >= scriptBytes.length) break;
+          const len = (scriptBytes[i] | (scriptBytes[i + 1] << 8) | (scriptBytes[i + 2] << 16) | (scriptBytes[i + 3] << 24)) >>> 0;
+          i += 4;
+          const data = scriptBytes.slice(i, i + len); i += len;
+          ops.push({ opcode: 0x4e, name: 'OP_PUSHDATA4', data: data, category: 'push' });
+          continue;
+        }
+        const name = OPCODE_NAMES[op] || ('OP_UNKNOWN(0x' + op.toString(16) + ')');
+        ops.push({ opcode: op, name: name, data: null, category: getOpcodeCategory(op) });
+      }
+      let type = 'unknown';
+      if (ops.length === 5 && ops[0].name === 'OP_DUP' && ops[1].name === 'OP_HASH160' && ops[2].data && ops[2].data.length === 20 && ops[3].name === 'OP_EQUALVERIFY' && ops[4].name === 'OP_CHECKSIG') type = 'p2pkh';
+      else if (ops.length === 3 && ops[0].name === 'OP_HASH160' && ops[1].data && ops[1].data.length === 20 && ops[2].name === 'OP_EQUAL') type = 'p2sh';
+      else if (ops.length === 2 && ops[0].name === 'OP_0' && ops[1].data && ops[1].data.length === 20) type = 'p2wpkh';
+      else if (ops.length === 2 && ops[0].name === 'OP_0' && ops[1].data && ops[1].data.length === 32) type = 'p2wsh';
+      else if (ops.length === 2 && ops[0].name === 'OP_1' && ops[1].data && ops[1].data.length === 32) type = 'p2tr';
+      else if (ops.length === 1 && ops[0].name === 'OP_RETURN') type = 'opreturn';
+      else if (ops.length >= 3 && ops[0].opcode >= 0x51 && ops[0].opcode <= 0x60 && ops[ops.length - 1].name === 'OP_CHECKMULTISIG') type = 'multisig';
+      return { type: type, ops: ops };
+    }
+    function scriptTypeLabel(type) {
+      const labels = { p2pkh: 'P2PKH', p2sh: 'P2SH', p2wpkh: 'P2WPKH', p2wsh: 'P2WSH', p2tr: 'P2TR (Taproot)', multisig: 'Multisig', opreturn: 'OP_RETURN', empty: 'Empty', unknown: 'Unknown' };
+      return labels[type] || type;
+    }
+    function base58Encode(bytes) {
+      const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+      let num = BigInt(0); for (let i = 0; i < bytes.length; i++) num = num * 256n + BigInt(bytes[i]);
+      let s = ''; while (num > 0n) { s = ALPHABET[Number(num % 58n)] + s; num = num / 58n; }
+      for (let i = 0; i < bytes.length && bytes[i] === 0; i++) s = '1' + s;
+      return s;
+    }
+    function base58checkEncode(versionByte, payload) {
+      const buf = new Uint8Array(1 + payload.length);
+      buf[0] = versionByte; for (let i = 0; i < payload.length; i++) buf[1 + i] = payload[i];
+      const h = sha256Sync(sha256Sync(buf));
+      const out = new Uint8Array(buf.length + 4); out.set(buf); out.set(h.slice(0, 4), buf.length);
+      return base58Encode(out);
+    }
+    function bech32Encode(hrp, version, data) {
+      const CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+      const GEN = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
+      function polymod(values) { let chk = 1; for (let i = 0; i < values.length; i++) { const b = chk >> 25; chk = ((chk & 0x1ffffff) << 5) ^ values[i]; for (let j = 0; j < 5; j++) if ((b >> j) & 1) chk ^= GEN[j]; } return chk; }
+      const isBech32m = (version === 1);
+      const data5 = [version]; let acc = 0, bits = 0;
+      for (let i = 0; i < data.length; i++) { acc = (acc << 8) | data[i]; bits += 8; while (bits >= 5) { bits -= 5; data5.push((acc >> bits) & 31); } }
+      if (bits > 0) data5.push((acc << (5 - bits)) & 31);
+      const hrpExp = []; for (let i = 0; i < hrp.length; i++) hrpExp.push(hrp.charCodeAt(i) >> 5); hrpExp.push(0); for (let i = 0; i < hrp.length; i++) hrpExp.push(hrp.charCodeAt(i) & 31);
+      const combined = hrpExp.concat(data5);
+      const chk = polymod(combined.concat([0,0,0,0,0,0])) ^ (isBech32m ? 0x2bc830a3 : 1);
+      for (let i = 0; i < 6; i++) data5.push((chk >> (5 * (5 - i))) & 31);
+      return hrp + '1' + data5.map(d => CHARSET[d]).join('');
+    }
+    function scriptPubKeyToAddress(scriptPubKey) {
+      if (!scriptPubKey || scriptPubKey.length < 2) return null;
+      const dec = decodeScript(scriptPubKey);
+      if (dec.type === 'p2pkh' && dec.ops[2].data && dec.ops[2].data.length === 20) return base58checkEncode(0x00, dec.ops[2].data);
+      if (dec.type === 'p2sh' && dec.ops[1].data && dec.ops[1].data.length === 20) return base58checkEncode(0x05, dec.ops[1].data);
+      if (dec.type === 'p2wpkh' && dec.ops[1].data && dec.ops[1].data.length === 20) return bech32Encode('bc', 0, dec.ops[1].data);
+      if (dec.type === 'p2wsh' && dec.ops[1].data && dec.ops[1].data.length === 32) return bech32Encode('bc', 0, dec.ops[1].data);
+      if (dec.type === 'p2tr' && dec.ops[1].data && dec.ops[1].data.length === 32) return bech32Encode('bc', 1, dec.ops[1].data);
+      if (dec.type === 'opreturn') return '(OP_RETURN)';
+      return null;
+    }
+    const SIGHASH_LABELS = { 0x01: 'SIGHASH_ALL', 0x02: 'SIGHASH_NONE', 0x03: 'SIGHASH_SINGLE', 0x81: 'SIGHASH_ALL|ANYONECANPAY', 0x82: 'SIGHASH_NONE|ANYONECANPAY', 0x83: 'SIGHASH_SINGLE|ANYONECANPAY' };
+    function getSighashLabel(b) {
+      if (b === undefined || b === null) return null;
+      return SIGHASH_LABELS[b] || ('0x' + (b & 0xff).toString(16));
+    }
+    const PSBT_GLOBAL_KEYS = { 0x00: 'unsigned_tx', 0x01: 'xpub', 0xfb: 'version' };
+    const PSBT_IN_KEYS = { 0x00: 'non_witness_utxo', 0x01: 'witness_utxo', 0x02: 'partial_sigs', 0x03: 'sighash_type', 0x04: 'redeem_script', 0x05: 'witness_script', 0x06: 'bip32_derivs', 0x07: 'final_scriptsig', 0x08: 'final_script_witness', 0x09: 'ripemd160', 0x0a: 'sha256', 0x0b: 'hash160', 0x0c: 'hash256' };
+    const PSBT_OUT_KEYS = { 0x00: 'redeem_script', 0x01: 'witness_script', 0x02: 'bip32_derivs' };
+    function parseTxGetOutput(txBytes, voutIndex) {
+      if (!txBytes || txBytes.length < 10) return null;
+      let tp = 4;
+      const hasWitness = txBytes[tp] === 0 && txBytes[tp + 1] === 1;
+      if (hasWitness) tp += 2;
+      const inCount = readCompactSize(txBytes, tp); tp = inCount.next;
+      for (let i = 0; i < inCount.size; i++) {
+        tp += 36;
+        const ssLen = readCompactSize(txBytes, tp); tp = ssLen.next + ssLen.size;
+        tp += 4;
+      }
+      const outCount = readCompactSize(txBytes, tp); tp = outCount.next;
+      if (voutIndex >= outCount.size) return null;
+      for (let j = 0; j < voutIndex; j++) {
+        tp += 8;
+        const spkLen = readCompactSize(txBytes, tp); tp = spkLen.next + spkLen.size;
+      }
+      const value = Number(BigInt(txBytes[tp]) | (BigInt(txBytes[tp + 1]) << 8n) | (BigInt(txBytes[tp + 2]) << 16n) | (BigInt(txBytes[tp + 3]) << 24n) | (BigInt(txBytes[tp + 4]) << 32n) | (BigInt(txBytes[tp + 5]) << 40n) | (BigInt(txBytes[tp + 6]) << 48n) | (BigInt(txBytes[tp + 7]) << 56n));
+      tp += 8;
+      const spkLen = readCompactSize(txBytes, tp); tp = spkLen.next;
+      const scriptPubKey = txBytes.slice(tp, tp + spkLen.size);
+      return { value: value, scriptPubKey: scriptPubKey };
+    }
+    function parsePsbtFull(psbtInput) {
+      let bytes;
+      if (typeof psbtInput === 'string') {
+        const raw = psbtInput.trim();
+        if (/^[0-9a-fA-F]+$/.test(raw)) bytes = hexToBytes(raw);
+        else bytes = new Uint8Array(Array.from(atob(raw), c => c.charCodeAt(0)));
+      } else if (psbtInput instanceof Uint8Array) bytes = psbtInput;
+      else bytes = new Uint8Array(psbtInput);
+      if (bytes.length < 6 || bytes[0] !== 0x70 || bytes[1] !== 0x73 || bytes[2] !== 0x62 || bytes[3] !== 0x74 || bytes[4] !== 0xff)
+        throw new Error('Invalid PSBT: magic bytes 0x70736274ff expected');
+      let pos = 5;
+      const global = { keys: [], unsignedTx: null };
+      while (pos < bytes.length) {
+        const kl = readCompactSize(bytes, pos); pos = kl.next;
+        if (kl.size === 0) break;
+        const key = bytes.slice(pos, pos + kl.size); pos += kl.size;
+        const vl = readCompactSize(bytes, pos); pos = vl.next;
+        const val = bytes.slice(pos, pos + vl.size); pos += vl.size;
+        const kt = key[0];
+        global.keys.push({ type: kt, name: PSBT_GLOBAL_KEYS[kt] || ('key_0x' + kt.toString(16)), key: key, value: val });
+        if (kt === 0x00 && key.length === 1) global.unsignedTx = val;
+      }
+      if (!global.unsignedTx) throw new Error('PSBT has no unsigned transaction');
+      let tp = 0;
+      const version = global.unsignedTx[tp] | (global.unsignedTx[tp + 1] << 8) | (global.unsignedTx[tp + 2] << 16) | (global.unsignedTx[tp + 3] << 24);
+      tp = 4;
+      const inCount = readCompactSize(global.unsignedTx, tp); tp = inCount.next;
+      const numInputs = inCount.size;
+      const unsignedInputs = [];
+      for (let i = 0; i < numInputs; i++) {
+        const prevTxid = bytesToHex(global.unsignedTx.slice(tp, tp + 32)); tp += 32;
+        const prevVout = global.unsignedTx[tp] | (global.unsignedTx[tp + 1] << 8) | (global.unsignedTx[tp + 2] << 16) | (global.unsignedTx[tp + 3] << 24);
+        tp += 4;
+        const scriptSigLen = readCompactSize(global.unsignedTx, tp); tp = scriptSigLen.next;
+        const scriptSig = global.unsignedTx.slice(tp, tp + scriptSigLen.size); tp += scriptSigLen.size;
+        const sequence = bytesToHex(global.unsignedTx.slice(tp, tp + 4)); tp += 4;
+        unsignedInputs.push({ prevTxid: prevTxid, prevVout: prevVout, scriptSig: scriptSig, sequence: sequence });
+      }
+      const outCount = readCompactSize(global.unsignedTx, tp); tp = outCount.next;
+      const numOutputs = outCount.size;
+      const unsignedOutputs = [];
+      for (let i = 0; i < numOutputs; i++) {
+        const value = Number(BigInt(global.unsignedTx[tp]) | (BigInt(global.unsignedTx[tp + 1]) << 8n) | (BigInt(global.unsignedTx[tp + 2]) << 16n) | (BigInt(global.unsignedTx[tp + 3]) << 24n) | (BigInt(global.unsignedTx[tp + 4]) << 32n) | (BigInt(global.unsignedTx[tp + 5]) << 40n) | (BigInt(global.unsignedTx[tp + 6]) << 48n) | (BigInt(global.unsignedTx[tp + 7]) << 56n));
+        tp += 8;
+        const spkLen = readCompactSize(global.unsignedTx, tp); tp = spkLen.next;
+        const scriptPubKey = global.unsignedTx.slice(tp, tp + spkLen.size); tp += spkLen.size;
+        unsignedOutputs.push({ value: value, scriptPubKey: scriptPubKey });
+      }
+      const locktime = global.unsignedTx[tp] | (global.unsignedTx[tp + 1] << 8) | (global.unsignedTx[tp + 2] << 16) | (global.unsignedTx[tp + 3] << 24);
+      const unsignedTx = { version: version, numInputs: numInputs, numOutputs: numOutputs, inputs: unsignedInputs, outputs: unsignedOutputs, locktime: locktime };
+      const inputMaps = [];
+      for (let inp = 0; inp < numInputs; inp++) {
+        const map = { keys: [] };
+        while (pos < bytes.length) {
+          const kl = readCompactSize(bytes, pos); pos = kl.next;
+          if (kl.size === 0) break;
+          const key = bytes.slice(pos, pos + kl.size); pos += kl.size;
+          const vl = readCompactSize(bytes, pos); pos = vl.next;
+          const val = bytes.slice(pos, pos + vl.size); pos += vl.size;
+          const kt = key[0];
+          const name = PSBT_IN_KEYS[kt] || ('key_0x' + kt.toString(16));
+          map.keys.push({ type: kt, name: name, key: key, value: val });
+          if (kt === 0x00) {
+            try {
+              const out = parseTxGetOutput(val, unsignedInputs[inp].prevVout);
+              if (out) map.non_witness_utxo = out;
+            } catch (e) {}
+          } else if (kt === 0x01) {
+            const v = Number(BigInt(val[0]) | (BigInt(val[1]) << 8n) | (BigInt(val[2]) << 16n) | (BigInt(val[3]) << 24n) | (BigInt(val[4]) << 32n) | (BigInt(val[5]) << 40n) | (BigInt(val[6]) << 48n) | (BigInt(val[7]) << 56n));
+            const spkLen = readCompactSize(val, 8);
+            const spk = val.slice(spkLen.next, spkLen.next + spkLen.size);
+            map.witness_utxo = { value: v, scriptPubKey: spk };
+          } else if (kt === 0x03) map.sighash_type = val[0];
+          else if (kt === 0x04) map.redeem_script = val;
+          else if (kt === 0x05) map.witness_script = val;
+          else if (kt === 0x07) map.final_scriptsig = val;
+          else if (kt === 0x08) map.final_script_witness = val;
+          else if (kt === 0x02) map.partial_sigs = val;
+          else if (kt === 0x06 && key.length === 34) {
+            map.bip32_derivs = map.bip32_derivs || [];
+            const pubkey = key.slice(1, 34);
+            const fingerprint = val.slice(0, 4);
+            const pathLen = (val.length - 4) / 4;
+            const path = [];
+            for (let p = 0; p < pathLen; p++) path.push((val[4 + p * 4] | (val[5 + p * 4] << 8) | (val[6 + p * 4] << 16) | (val[7 + p * 4] << 24)) >>> 0);
+            map.bip32_derivs.push({ pubkey: pubkey, fingerprint: fingerprint, path: path });
+          } else if (kt === 0x16 && key.length === 33) {
+            map.tap_bip32_derivs = map.tap_bip32_derivs || [];
+            map.tap_bip32_derivs.push({ pubkey_32: key.slice(1, 33) });
+          } else if (kt === 0x17 && key.length === 1 && val.length === 32) {
+            map.tap_internal_key = val;
+          }
+        }
+        inputMaps.push(map);
+      }
+      const outputMaps = [];
+      for (let out = 0; out < numOutputs; out++) {
+        const map = { keys: [] };
+        while (pos < bytes.length) {
+          const kl = readCompactSize(bytes, pos); pos = kl.next;
+          if (kl.size === 0) break;
+          const key = bytes.slice(pos, pos + kl.size); pos += kl.size;
+          const vl = readCompactSize(bytes, pos); pos = vl.next;
+          const val = bytes.slice(pos, pos + vl.size); pos += vl.size;
+          const kt = key[0];
+          map.keys.push({ type: kt, name: PSBT_OUT_KEYS[kt] || ('key_0x' + kt.toString(16)), key: key, value: val });
+          if (kt === 0x02 && key.length === 34) {
+            map.bip32_derivs = map.bip32_derivs || [];
+            const pubkey = key.slice(1, 34);
+            const fingerprint = val.slice(0, 4);
+            const pathLen = (val.length - 4) / 4;
+            const path = [];
+            for (let p = 0; p < pathLen; p++) path.push((val[4 + p * 4] | (val[5 + p * 4] << 8) | (val[6 + p * 4] << 16) | (val[7 + p * 4] << 24)) >>> 0);
+            map.bip32_derivs.push({ pubkey: pubkey, fingerprint: fingerprint, path: path });
+          } else if (kt === 0x07 && key.length === 33) {
+            map.tap_bip32_derivs = map.tap_bip32_derivs || [];
+            map.tap_bip32_derivs.push({ pubkey_32: key.slice(1, 33) });
+          } else if (kt === 0x05 && key.length === 1 && val.length === 32) {
+            map.tap_internal_key = val;
+          }
+        }
+        outputMaps.push(map);
+      }
+      return { global: global, unsignedTx: unsignedTx, inputMaps: inputMaps, outputMaps: outputMaps };
+    }
+    function renderInspect(parsed) {
+      const tx = parsed.unsignedTx;
+      let totalIn = 0, totalOut = 0;
+      const revTxid = (hex) => {
+        const b = hexToBytes(hex); b.reverse(); return bytesToHex(b);
+      };
+      let allFinal = true, anyPartial = false;
+      parsed.inputMaps.forEach(im => {
+        if (im.final_scriptsig && im.final_scriptsig.length > 0 || im.final_script_witness && im.final_script_witness.length > 0) { /* finalized */ }
+        else allFinal = false;
+        if (im.partial_sigs && im.partial_sigs.length > 0) anyPartial = true;
+      });
+      const psbtState = allFinal ? 'Finalized' : anyPartial ? 'Partially signed' : 'Unsigned';
+      let html = '';
+      html += '<div class="inspect-panel"><h3>Overview</h3>';
+      html += '<div class="inspect-row"><span class="inspect-label">PSBT state</span><span class="inspect-value">' + psbtState + '</span></div>';
+      html += '<div class="inspect-row"><span class="inspect-label">Version</span><span class="inspect-value">' + tx.version + '</span></div>';
+      html += '<div class="inspect-row"><span class="inspect-label">Locktime</span><span class="inspect-value">' + tx.locktime + (tx.locktime > 0 ? ' (block/time lock)' : '') + '</span></div>';
+      html += '<div class="inspect-row"><span class="inspect-label">Inputs</span><span class="inspect-value">' + tx.numInputs + '</span></div>';
+      html += '<div class="inspect-row"><span class="inspect-label">Outputs</span><span class="inspect-value">' + tx.numOutputs + '</span></div>';
+      for (let i = 0; i < tx.outputs.length; i++) totalOut += Number(tx.outputs[i].value);
+      html += '<div class="inspect-row"><span class="inspect-label">Total output value</span><span class="inspect-value">' + formatSats(totalOut) + '</span></div>';
+      html += '</div>';
+      html += '<div class="inspect-panel"><h3>Global map</h3>';
+      parsed.global.keys.forEach(k => {
+        html += '<div class="inspect-row"><span class="inspect-label">' + k.name + '</span><span class="inspect-value inspect-hex">' + (k.type === 0x00 ? 'unsigned tx (' + k.value.length + ' bytes)' : k.value.length + ' bytes') + '</span></div>';
+      });
+      html += '</div>';
+      html += '<div class="inspect-panel"><h3>Inputs</h3>';
+      for (let idx = 0; idx < tx.inputs.length; idx++) {
+        const inp = tx.inputs[idx];
+        const revId = revTxid(inp.prevTxid);
+        html += '<div class="inspect-collapse open" onclick="this.classList.toggle(\'open\'); this.nextElementSibling.classList.toggle(\'open\');"><span class="arrow">&#9654;</span> Input #' + (idx + 1) + ': ' + revId.substring(0, 16) + '...:' + inp.prevVout + '</div>';
+        html += '<div class="inspect-body open">';
+        html += '<div class="inspect-row"><span class="inspect-label">Previous txid</span><span class="inspect-value inspect-hex">' + revId + '</span></div>';
+        html += '<div class="inspect-row"><span class="inspect-label">Output index</span><span class="inspect-value">' + inp.prevVout + '</span></div>';
+        html += '<div class="inspect-row"><span class="inspect-label">Sequence</span><span class="inspect-value">' + inp.sequence + '</span></div>';
+        const im = parsed.inputMaps[idx];
+        const utxo = im.witness_utxo || im.non_witness_utxo;
+        if (utxo) {
+          totalIn += Number(utxo.value);
+          html += '<div class="inspect-row"><span class="inspect-label">' + (im.witness_utxo ? 'Witness' : 'Non-witness') + ' UTXO value</span><span class="inspect-value">' + formatSats(utxo.value) + '</span></div>';
+          const dec = decodeScript(utxo.scriptPubKey);
+          const inAddr = scriptPubKeyToAddress(utxo.scriptPubKey);
+          if (inAddr) html += '<div class="inspect-row"><span class="inspect-label">Address</span><span class="inspect-value addr">' + inAddr + '</span></div>';
+          html += '<div class="inspect-row"><span class="inspect-label">Script type</span><span class="inspect-value"><span class="inspect-script-type ' + dec.type + '">' + scriptTypeLabel(dec.type) + '</span></span></div>';
+          html += '<h4>ScriptPubKey (opcodes)</h4><div class="inspect-stack">';
+          dec.ops.forEach((op, i) => {
+            if (op.data) html += '<span class="inspect-opcode ' + op.category + '">' + op.name + '</span> <span class="inspect-hex">' + bytesToHex(op.data) + '</span><br/>';
+            else html += '<span class="inspect-opcode ' + op.category + '">' + op.name + '</span> ';
+          });
+          html += '</div>';
+        }
+        if (im.sighash_type !== undefined) html += '<div class="inspect-row"><span class="inspect-label">Sighash type</span><span class="inspect-value"><span class="inspect-sighash">' + (getSighashLabel(im.sighash_type) || im.sighash_type) + '</span></span></div>';
+        if (im.partial_sigs && im.partial_sigs.length > 0) html += '<div class="inspect-row"><span class="inspect-label">Partial signatures</span><span class="inspect-value">Present (' + im.partial_sigs.length + ' bytes)</span></div>';
+        if (im.redeem_script && im.redeem_script.length) {
+          const dec = decodeScript(im.redeem_script);
+          html += '<h4>Redeem script</h4><div class="inspect-stack">';
+          dec.ops.forEach((op, i) => {
+            if (op.data) html += '<span class="inspect-opcode ' + op.category + '">' + op.name + '</span> <span class="inspect-hex">' + bytesToHex(op.data) + '</span><br/>';
+            else html += '<span class="inspect-opcode ' + op.category + '">' + op.name + '</span> ';
+          });
+          html += '</div>';
+        }
+        if (im.witness_script && im.witness_script.length) {
+          const dec = decodeScript(im.witness_script);
+          html += '<h4>Witness script</h4><div class="inspect-stack">';
+          dec.ops.forEach((op, i) => {
+            if (op.data) html += '<span class="inspect-opcode ' + op.category + '">' + op.name + '</span> <span class="inspect-hex">' + bytesToHex(op.data) + '</span><br/>';
+            else html += '<span class="inspect-opcode ' + op.category + '">' + op.name + '</span> ';
+          });
+          html += '</div>';
+        }
+        if (im.final_scriptsig && im.final_scriptsig.length > 0) {
+          const dec = decodeScript(im.final_scriptsig);
+          html += '<h4>Final scriptSig</h4><div class="inspect-stack">';
+          dec.ops.forEach((op, i) => {
+            if (op.data) html += '<span class="inspect-opcode ' + op.category + '">' + op.name + '</span> <span class="inspect-hex">' + bytesToHex(op.data) + '</span><br/>';
+            else html += '<span class="inspect-opcode ' + op.category + '">' + op.name + '</span> ';
+          });
+          html += '</div>';
+        }
+        if (im.final_script_witness && im.final_script_witness.length > 0) {
+          let wp = 0;
+          const wCount = readCompactSize(im.final_script_witness, wp); wp = wCount.next;
+          html += '<h4>Witness stack (' + wCount.size + ' items)</h4><div class="inspect-stack">';
+          for (let w = 0; w < wCount.size; w++) {
+            const wl = readCompactSize(im.final_script_witness, wp); wp = wl.next;
+            const item = im.final_script_witness.slice(wp, wp + wl.size); wp += wl.size;
+            html += '<div class="inspect-stack-item"><span class="idx">[' + w + ']</span>' + bytesToHex(item) + '</div>';
+          }
+          html += '</div>';
+        }
+        im.keys.forEach(k => { if (!['witness_utxo','sighash_type','redeem_script','witness_script','final_scriptsig','final_script_witness','partial_sigs'].includes(k.name)) html += '<div class="inspect-row"><span class="inspect-label">' + k.name + '</span><span class="inspect-value inspect-hex">' + k.value.length + ' B</span></div>'; });
+        html += '</div>';
+      }
+      html += '</div>';
+      var inputPubkeys33 = new Set();
+      var inputPubkeys32 = new Set();
+      parsed.inputMaps.forEach(function (im) {
+        if (im.bip32_derivs) im.bip32_derivs.forEach(function (d) { inputPubkeys33.add(bytesToHex(d.pubkey)); });
+        if (im.tap_bip32_derivs) im.tap_bip32_derivs.forEach(function (d) { inputPubkeys32.add(bytesToHex(d.pubkey_32)); });
+        if (im.tap_internal_key && im.tap_internal_key.length === 32) inputPubkeys32.add(bytesToHex(im.tap_internal_key));
+      });
+      function outputIsChange(outIdx) {
+        var om = parsed.outputMaps[outIdx];
+        if (!om) return false;
+        if (om.bip32_derivs) for (var i = 0; i < om.bip32_derivs.length; i++) if (inputPubkeys33.has(bytesToHex(om.bip32_derivs[i].pubkey))) return true;
+        if (om.tap_bip32_derivs) for (var j = 0; j < om.tap_bip32_derivs.length; j++) if (inputPubkeys32.has(bytesToHex(om.tap_bip32_derivs[j].pubkey_32))) return true;
+        if (om.tap_internal_key && om.tap_internal_key.length === 32 && inputPubkeys32.has(bytesToHex(om.tap_internal_key))) return true;
+        return false;
+      }
+      html += '<div class="inspect-panel"><h3>Outputs</h3>';
+      for (let idx = 0; idx < tx.outputs.length; idx++) {
+        const out = tx.outputs[idx];
+        const dec = decodeScript(out.scriptPubKey);
+        const isChange = outputIsChange(idx);
+        const roleLabel = isChange ? '<span class="inspect-output-role change">Change</span>' : '<span class="inspect-output-role payment">Payment</span>';
+        html += '<div class="inspect-collapse open" onclick="this.classList.toggle(\'open\'); this.nextElementSibling.classList.toggle(\'open\');"><span class="arrow">&#9654;</span> Output #' + (idx + 1) + ': ' + formatSats(out.value) + ' — ' + scriptTypeLabel(dec.type) + roleLabel + '</div>';
+        html += '<div class="inspect-body open">';
+        html += '<div class="inspect-row"><span class="inspect-label">Role</span><span class="inspect-value">' + (isChange ? 'Change (same key as an input — BIP32 derivation match)' : 'Payment (recipient)') + '</span></div>';
+        const outAddr = scriptPubKeyToAddress(out.scriptPubKey);
+        if (outAddr) html += '<div class="inspect-row"><span class="inspect-label">Address</span><span class="inspect-value addr">' + outAddr + '</span></div>';
+        html += '<div class="inspect-row"><span class="inspect-label">Value</span><span class="inspect-value">' + formatSats(out.value) + '</span></div>';
+        html += '<div class="inspect-row"><span class="inspect-label">Script type</span><span class="inspect-value"><span class="inspect-script-type ' + dec.type + '">' + scriptTypeLabel(dec.type) + '</span></span></div>';
+        html += '<h4>ScriptPubKey (opcodes)</h4><div class="inspect-stack">';
+        dec.ops.forEach((op, i) => {
+          if (op.data) html += '<span class="inspect-opcode ' + op.category + '">' + op.name + '</span> <span class="inspect-hex">' + bytesToHex(op.data) + '</span><br/>';
+          else html += '<span class="inspect-opcode ' + op.category + '">' + op.name + '</span> ';
+        });
+        html += '</div>';
+        parsed.outputMaps[idx].keys.forEach(k => { html += '<div class="inspect-row"><span class="inspect-label">' + k.name + '</span><span class="inspect-value">' + k.value.length + ' B</span></div>'; });
+        html += '</div>';
+      }
+      html += '</div>';
+      if (totalIn > 0 && totalOut > 0) {
+        const fee = totalIn - totalOut;
+        html += '<div class="inspect-panel"><h3>Fee</h3><div class="inspect-row"><span class="inspect-label">Estimated fee</span><span class="inspect-value">' + formatSats(fee) + '</span></div></div>';
+      }
+      return html;
+    }
+    function runInspect() {
+      const raw = document.getElementById('psbt-inspect-input').value.trim();
+      if (!raw) { showToast('Paste a PSBT first.', 'warning'); return; }
+      const el = document.getElementById('inspect-result');
+      try {
+        const parsed = parsePsbtFull(raw);
+        el.innerHTML = renderInspect(parsed);
+        showToast('PSBT decoded successfully.', 'success');
+      } catch (e) {
+        el.innerHTML = '<div class="inspect-error">' + (e.message || 'Decode failed') + '</div>';
+        showToast('Decode failed: ' + e.message, 'error');
+      }
+    }
+    function useCurrentPsbtInspect() {
+      const psbt = currentPsbt || document.getElementById('psbt-hex-all').value.trim();
+      if (!psbt) { showToast('No PSBT in Sign tab. Paste or upload one first.', 'warning'); return; }
+      document.getElementById('psbt-inspect-input').value = psbt;
+      runInspect();
+    }
+
+    function updateFormatBadge(format) {
+      const badge = document.getElementById('format-badge');
+      if (!format) {
+        badge.style.display = 'none';
+        return;
+      }
+      badge.style.display = 'inline-block';
+      badge.className = 'format-badge ' + format;
+      const labels = { base64: 'Base64', hex: 'Hex', unknown: 'Unknown Format' };
+      badge.textContent = labels[format] || format;
+    }
+
+    // ===== WALLET CONNECTION =====
+    async function connectWallet() {
+      if (!hasExtension) {
+        showToast('UniSat wallet extension not found.', 'error');
+        return;
+      }
+      const btn = document.getElementById('connect-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Connecting...';
+      try {
+        let accounts = await window.unisat.requestAccounts();
+        currentAddress = accounts[0];
+        currentPubkey = await window.unisat.getPublicKey();
+        onWalletConnected(currentAddress, currentPubkey);
+        showToast('Wallet connected: ' + currentAddress.substring(0, 12) + '...', 'success');
+      } catch (e) {
+        showToast('Connection failed: ' + (e?.message || 'Is UniSat installed?'), 'error');
+        btn.disabled = false;
+        btn.textContent = 'Connect UniSat Wallet';
+      }
+    }
+
+    function onWalletConnected(address, pubkey) {
+      currentAddress = address;
+      currentPubkey = pubkey || '';
+      // Update badge
+      const badge = document.getElementById('wallet-badge');
+      badge.className = 'wallet-badge connected';
+      badge.innerHTML = '<span class="dot"></span> Connected';
+      // Update info
+      document.getElementById('wallet-address').textContent = address;
+      const pubkeyEl = document.getElementById('wallet-pubkey');
+      if (pubkeyEl) {
+        pubkeyEl.textContent = pubkey ? (pubkey.length > 24 ? pubkey.substring(0, 12) + '…' + pubkey.slice(-12) : pubkey) : '—';
+        pubkeyEl.title = pubkey ? 'Click to copy full pubkey' : '';
+        if (pubkey) pubkeyEl.onclick = function() { navigator.clipboard.writeText(pubkey); showToast('Pubkey copied', 'success', 2000); };
+        pubkeyEl.style.cursor = pubkey ? 'pointer' : '';
+      }
+      document.getElementById('wallet-info').style.display = '';
+      document.getElementById('connect-btn').style.display = 'none';
+      document.getElementById('mobile-wallet-options').classList.remove('show');
+      // Autofill address
+      document.getElementById('address-all').value = address;
+      // Store in localStorage
+      localStorage.setItem('tlb_signer_address', address);
+      if (pubkey) localStorage.setItem('tlb_signer_pubkey', pubkey);
+      // Fetch and show balance (UniSat getBalance)
+      refreshWalletBalance();
+    }
+
+    async function refreshWalletBalance() {
+      const el = document.getElementById('wallet-balance');
+      if (!el || !hasExtension || !currentAddress) return;
+      if (typeof window.unisat.getBalance !== 'function') { el.textContent = '—'; return; }
+      try {
+        const bal = await window.unisat.getBalance();
+        const total = (bal && typeof bal.total === 'number') ? bal.total : 0;
+        const confirmed = (bal && typeof bal.confirmed === 'number') ? bal.confirmed : 0;
+        const unconfirmed = (bal && typeof bal.unconfirmed === 'number') ? bal.unconfirmed : 0;
+        if (unconfirmed !== 0) {
+          el.innerHTML = formatSats(total) + ' <span style="color:#888;font-size:11px;">(confirmed: ' + formatSats(confirmed) + ', unconfirmed: ' + formatSats(unconfirmed) + ')</span>';
+        } else {
+          el.textContent = formatSats(total);
+        }
+      } catch (e) {
+        el.textContent = '—';
+        console.warn('Balance fetch failed:', e);
+      }
+    }
+
+    // ===== MOBILE DEEPLINK: OPEN IN UNISAT APP =====
+    function openInUnisatApp() {
+      // Try to open the current page inside UniSat's DApp browser
+      const pageUrl = encodeURIComponent(window.location.href);
+      // Try standard deeplink pattern
+      window.location.href = 'unisat://dapp?url=' + pageUrl;
+      // Fallback: after a short delay, show toast if still here
+      setTimeout(() => {
+        showToast('If UniSat did not open, please open the UniSat app and navigate to: ' + window.location.origin + window.location.pathname, 'warning', 8000);
+      }, 2000);
+    }
+
+    // ===== MOBILE DEEPLINK: CONNECT =====
+    function connectViaDeeplink() {
+      const nonce = generateNonce();
+      localStorage.setItem('tlb_pending_connect_nonce', nonce);
+      const data = btoa(JSON.stringify([]));
+      const url = 'unisat://request?method=connect'
+        + '&from=' + encodeURIComponent(CALLBACK_URL)
+        + '&nonce=' + encodeURIComponent(nonce);
+      window.location.href = url;
+      showToast('Opening UniSat wallet... Approve the connection and return here.', 'info', 6000);
+    }
+
+    // ===== MOBILE DEEPLINK: SIGN PSBT =====
+    function signViaDeeplink() {
+      const psbtRaw = currentPsbt || document.getElementById('psbt-hex-all').value.trim();
+      if (!psbtRaw) {
+        showToast('Please paste or upload a PSBT first.', 'warning');
+        return;
+      }
+
+      // UniSat deeplink expects hex PSBT
+      const psbtHex = getPsbtHex(psbtRaw);
+      const nonce = generateNonce();
+      const options = { autoFinalized: true };
+      const data = btoa(JSON.stringify([psbtHex, options]));
+
+      // Store state for round-trip
+      localStorage.setItem('tlb_pending_sign_nonce', nonce);
+      localStorage.setItem('tlb_pending_sign_psbt', psbtRaw);
+
+      const url = 'unisat://request?method=signPsbt'
+        + '&data=' + encodeURIComponent(data)
+        + '&from=' + encodeURIComponent(CALLBACK_URL)
+        + '&nonce=' + encodeURIComponent(nonce);
+
+      window.location.href = url;
+      showToast('Opening UniSat to sign... After signing, return here or paste the signed PSBT below.', 'info', 8000);
+    }
+
+    function useManualSignedPsbt() {
+      const signedPsbt = document.getElementById('signed-psbt-paste').value.trim();
+      if (!signedPsbt) {
+        showToast('Please paste the signed PSBT from your wallet.', 'warning');
+        return;
+      }
+      document.getElementById('result-all').value = signedPsbt;
+      // Auto-switch to broadcast tab
+      document.querySelector('[data-tab="tab-push"]').click();
+      document.getElementById('psbt-hex-push').value = signedPsbt;
+      showToast('Signed PSBT loaded. Ready to broadcast.', 'success');
+    }
+
+    // ===== CALLBACK HANDLER (deeplink response) =====
+    function handleDeeplinkCallback() {
+      const params = new URLSearchParams(window.location.search);
+      const responseData = params.get('data');
+      const responseError = params.get('error');
+      const nonce = params.get('nonce');
+
+      // Must have at least data or error to be a callback
+      if (!responseData && !responseError) return false;
+
+      console.log('[Callback] URL has data param, processing response...');
+      console.log('[Callback] nonce from URL:', nonce ? nonce.substring(0, 8) + '...' : 'none');
+
+      // Try to match nonces from localStorage
+      const signNonce = localStorage.getItem('tlb_pending_sign_nonce');
+      const connectNonce = localStorage.getItem('tlb_pending_connect_nonce');
+      const isSignMatch = signNonce && nonce && nonce === signNonce;
+      const isConnectMatch = connectNonce && nonce && nonce === connectNonce;
+
+      console.log('[Callback] sign nonce match:', isSignMatch, '| connect nonce match:', isConnectMatch);
+
+      // ── Handle error responses ──
+      if (responseError) {
+        try {
+          const err = JSON.parse(atob(responseError));
+          showToast('Wallet rejected: ' + (err.message || err), 'error');
+        } catch (e) {
+          showToast('Wallet request was rejected.', 'error');
+        }
+        // Clean up stored nonces
+        if (isSignMatch) {
+          localStorage.removeItem('tlb_pending_sign_nonce');
+          localStorage.removeItem('tlb_pending_sign_psbt');
+        }
+        if (isConnectMatch) {
+          localStorage.removeItem('tlb_pending_connect_nonce');
+        }
+        return true;
+      }
+
+      // ── Handle data responses ──
+      if (!responseData) return false;
+
+      let decoded;
+      try {
+        decoded = JSON.parse(atob(responseData));
+        console.log('[Callback] Decoded data type:', typeof decoded);
+      } catch (e) {
+        console.error('[Callback] Failed to decode base64/JSON data:', e);
+        showToast('Failed to decode response from wallet.', 'error');
+        return true;
+      }
+
+      // ── Nonce-matched sign response ──
+      if (isSignMatch) {
+        console.log('[Callback] Matched sign nonce, processing signed PSBT');
+        localStorage.removeItem('tlb_pending_sign_nonce');
+        const originalPsbt = localStorage.getItem('tlb_pending_sign_psbt');
+        localStorage.removeItem('tlb_pending_sign_psbt');
+        processSignedPsbtCallback(decoded, originalPsbt);
+        return true;
+      }
+
+      // ── Nonce-matched connect response ──
+      if (isConnectMatch) {
+        console.log('[Callback] Matched connect nonce, processing wallet connection');
+        localStorage.removeItem('tlb_pending_connect_nonce');
+        const address = typeof decoded === 'string' ? decoded : (decoded[0] || decoded.address || '');
+        if (address) {
+          onWalletConnected(address, decoded.publicKey || decoded[1] || '');
+          showToast('Wallet connected via UniSat app!', 'success');
+        }
+        return true;
+      }
+
+      // ── FALLBACK: No nonce match — auto-detect response type ──
+      // This handles cases where localStorage was lost during app switching,
+      // tab recycling on mobile, or browser session was cleared.
+      console.log('[Callback] No nonce match — using auto-detection fallback');
+
+      const dataStr = typeof decoded === 'string' ? decoded : (decoded[0] || '');
+
+      // Check if the data looks like a signed PSBT (starts with PSBT magic hex)
+      if (typeof dataStr === 'string' && /^70736274ff/i.test(dataStr)) {
+        console.log('[Callback] Auto-detected: signed PSBT hex');
+        const originalPsbt = localStorage.getItem('tlb_pending_sign_psbt');
+        localStorage.removeItem('tlb_pending_sign_nonce');
+        localStorage.removeItem('tlb_pending_sign_psbt');
+        processSignedPsbtCallback(decoded, originalPsbt);
+        return true;
+      }
+
+      // Check if the data looks like a Bitcoin address (connect response)
+      if (typeof dataStr === 'string' && /^(bc1|tb1|[13]|bcrt1)/i.test(dataStr)) {
+        console.log('[Callback] Auto-detected: wallet address (connect response)');
+        localStorage.removeItem('tlb_pending_connect_nonce');
+        onWalletConnected(dataStr, decoded.publicKey || decoded[1] || '');
+        showToast('Wallet connected via UniSat app!', 'success');
+        return true;
+      }
+
+      // Unknown data — still try to process as signed PSBT
+      console.warn('[Callback] Could not auto-detect data type, attempting PSBT processing');
+      processSignedPsbtCallback(decoded, null);
+      return true;
+    }
+
+    // Shared function to process a signed PSBT from callback
+    function processSignedPsbtCallback(decoded, originalPsbt) {
+      try {
+        const signedPsbt = typeof decoded === 'string' ? decoded : (decoded[0] || decoded);
+        // Store the signed PSBT in the result field
+        document.getElementById('result-all').value = signedPsbt;
+
+        // Try to extract raw tx for immediate broadcast
+        let broadcastData = signedPsbt;
+        let extractedRawTx = false;
+        if (/^70736274ff/i.test(signedPsbt)) {
+          try {
+            broadcastData = extractRawTxFromPsbt(signedPsbt);
+            extractedRawTx = true;
+            console.log('[Callback] Auto-extracted raw tx from signed PSBT for broadcast');
+          } catch (ex) {
+            console.warn('[Callback] Could not extract raw tx, will use signed PSBT hex:', ex.message);
+          }
+        }
+
+        document.getElementById('psbt-hex-push').value = broadcastData;
+
+        // Restore original PSBT in the input if available
+        if (originalPsbt) {
+          document.getElementById('psbt-hex-all').value = originalPsbt;
+          currentPsbt = originalPsbt;
+        }
+
+        if (extractedRawTx) {
+          showToast('PSBT signed & finalized! Raw transaction ready to broadcast.', 'success', 5000);
+        } else {
+          showToast('PSBT signed successfully! Ready to broadcast.', 'success');
+        }
+        // Switch to broadcast tab
+        document.querySelector('[data-tab="tab-push"]').click();
+      } catch (e) {
+        showToast('Failed to parse signed PSBT from wallet.', 'error');
+        console.error('[Callback] Parse error:', e);
+      }
+    }
+
+    // ===== SIGN (extension) =====
+    async function signPsbtAll() {
+      const psbtRaw = currentPsbt || document.getElementById('psbt-hex-all').value.trim();
+      if (!psbtRaw) {
+        showToast('Please paste PSBT or upload a file first.', 'warning');
+        return;
+      }
+
+      if (!hasExtension) {
+        showToast('UniSat extension not found. Use the mobile signing options below.', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('sign-btn-desktop');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Signing...';
+
+      try {
+        // UniSat extension expects hex
+        const psbtHex = getPsbtHex(psbtRaw);
+        const signedHex = await window.unisat.signPsbt(psbtHex, {
+          autoFinalized: true
+        });
+        document.getElementById('result-all').value = signedHex;
+        document.querySelector('[data-tab="tab-push"]').click();
+        document.getElementById('psbt-hex-push').value = signedHex;
+        showToast('Transaction signed successfully!', 'success');
+      } catch (e) {
+        document.getElementById('result-all').value = "Error: " + (e?.message || e);
+        showToast('Signing failed: ' + (e?.message || e), 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Sign Transaction';
+      }
+    }
+
+    // ===== BROADCAST VIA EXTENSION =====
+    async function pushViaExtension() {
+      const psbtHex = document.getElementById('psbt-hex-push').value.trim();
+      if (!psbtHex) {
+        showToast('Please paste a signed PSBT first.', 'warning');
+        return;
+      }
+
+      if (!hasExtension) {
+        showToast('UniSat extension not available. Use "Broadcast via Mempool" instead.', 'warning');
+        return;
+      }
+
+      const btn = document.getElementById('push-ext-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Broadcasting...';
+
+      try {
+        const txid = await window.unisat.pushPsbt(psbtHex);
+        showBroadcastResult(txid);
+        showToast('Transaction broadcast successfully!', 'success');
+      } catch (e) {
+        // Try finalize + pushTx fallback
+        try {
+          if (window.unisat.finalizePsbt) {
+            const finalized = await window.unisat.finalizePsbt(psbtHex);
+            if (finalized.hex) {
+              const txid = await window.unisat.pushTx({ rawtx: finalized.hex });
+              showBroadcastResult(txid);
+              showToast('Transaction broadcast successfully!', 'success');
+              return;
+            }
+          }
+          throw e;
+        } catch (e2) {
+          showToast('Broadcast failed: ' + (e2?.message || e2) + '. Try "Broadcast via Mempool".', 'error');
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Broadcast via UniSat';
+      }
+    }
+
+    // ===== BROADCAST VIA MEMPOOL API =====
+    async function pushViaMempool() {
+      let data = document.getElementById('psbt-hex-push').value.trim();
+      if (!data) {
+        showToast('Please paste a signed PSBT or raw transaction hex first.', 'warning');
+        return;
+      }
+
+      const btn = document.getElementById('push-mempool-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Broadcasting...';
+
+      try {
+        let txHex = data;
+
+        // If this is a PSBT (signed or unsigned), extract the raw transaction
+        if (/^70736274ff/i.test(txHex)) {
+          try {
+            showToast('Signed PSBT detected — extracting finalized transaction...', 'info', 3000);
+            txHex = extractRawTxFromPsbt(txHex);
+            console.log('Extracted raw tx from PSBT:', txHex.substring(0, 40) + '...');
+          } catch (extractErr) {
+            showToast('PSBT extraction failed: ' + extractErr.message, 'error', 6000);
+            btn.disabled = false;
+            btn.textContent = 'Broadcast via Mempool';
+            return;
+          }
+        }
+
+        // Also handle base64-encoded PSBT (convert to hex first, then extract)
+        if (/^cHNi/.test(txHex) || (/^[A-Za-z0-9+/]+=*$/.test(txHex) && txHex.length > 50)) {
+          try {
+            const binary = atob(txHex);
+            if (binary.charCodeAt(0) === 0x70 && binary.charCodeAt(1) === 0x73) {
+              const hex = Array.from(binary, c => ('0' + c.charCodeAt(0).toString(16)).slice(-2)).join('');
+              showToast('Base64 PSBT detected — extracting finalized transaction...', 'info', 3000);
+              txHex = extractRawTxFromPsbt(hex);
+            }
+          } catch (e) {
+            // Not base64 PSBT, try broadcasting as-is
+          }
+        }
+
+        const cfg = MEMPOOL_APIS[broadcastChain] || MEMPOOL_APIS.fb;
+        const response = await fetch(cfg.api, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: txHex
+        });
+
+        if (response.ok) {
+          const txid = await response.text();
+          showBroadcastResult(txid, broadcastChain);
+          showToast('Transaction broadcast via ' + cfg.label + '!', 'success');
+        } else {
+          const errText = await response.text();
+          showToast('Mempool broadcast failed: ' + errText, 'error', 8000);
+        }
+      } catch (e) {
+        showToast('Network error: ' + (e?.message || e), 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Broadcast via Mempool';
+      }
+    }
+
+    function setBroadcastChain(chain) {
+      broadcastChain = chain;
+      const fb = document.getElementById('broadcast-chain-fb');
+      const btc = document.getElementById('broadcast-chain-btc');
+      fb.classList.toggle('active', chain === 'fb');
+      btc.classList.toggle('active', chain === 'btc');
+      fb.style.background = chain === 'fb' ? 'var(--primary)' : '';
+      fb.style.color = chain === 'fb' ? 'var(--bg-deep)' : '';
+      btc.style.background = chain === 'btc' ? 'var(--primary)' : '';
+      btc.style.color = chain === 'btc' ? 'var(--bg-deep)' : '';
+    }
+    function showBroadcastResult(txid, chain) {
+      const cfg = MEMPOOL_APIS[chain || broadcastChain] || MEMPOOL_APIS.fb;
+      const container = document.getElementById('broadcast-result');
+      container.style.display = 'block';
+      container.innerHTML = '<div class="broadcast-result">'
+        + '<div class="txid-label">Transaction ID:</div>'
+        + '<div class="txid-value">' + txid + '</div>'
+        + '<a href="' + cfg.base + '/tx/' + txid + '" target="_blank" class="mempool-link">'
+        + '&#9741; View on ' + cfg.label + '</a>'
+        + '</div>';
+    }
+
+    // ===== DECODE API =====
+    async function decodePsbtApi(psbtBase64) {
+      try {
+        const response = await fetch('https://infratools.thelonelybit.org/api/decode-psbt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ psbt: psbtBase64 })
+        });
+        if (!response.ok) throw new Error('Failed to decode PSBT: ' + response.statusText);
+        const data = await response.json();
+        if (!data.success) throw new Error('PSBT decoding failed');
+        return {
+          inputs: data.inputs || [],
+          outputs: data.outputs || [],
+          fee: null
+        };
+      } catch (e) {
+        console.error('Decode PSBT API error:', e);
+        throw e;
+      }
+    }
+
+    // ===== UTILITY FUNCTIONS =====
+    function formatSats(sats) {
+      if (sats >= 100000000) return (sats / 100000000).toFixed(8) + ' FB';
+      return sats.toLocaleString() + ' sats';
+    }
+
+    function shortenAddr(addr) {
+      if (!addr || addr.length < 14) return addr;
+      return addr.substring(0, 8) + '...' + addr.substring(addr.length - 6);
+    }
+
+    function generateNonce() {
+      if (crypto.randomUUID) return crypto.randomUUID();
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      });
+    }
+
+    // Build Sign-tab transaction details HTML from client-side parsed PSBT (fallback when API fails)
+    function renderSignTabFromParsed(parsed, normalized) {
+      const tx = parsed.unsignedTx;
+      let totalOutputValue = 0;
+      tx.outputs.forEach(o => { totalOutputValue += Number(o.value); });
+      const revTxid = (hex) => { const b = hexToBytes(hex); b.reverse(); return bytesToHex(b); };
+      let html = '<div class="tx-info">';
+      html += '<div class="tx-info-title">Transaction Details</div>';
+      html += '<div class="tx-info-row" style="border-bottom: 2px solid #4CAF50; padding-bottom: 6px; margin-bottom: 6px;">';
+      html += '<span class="tx-info-label">Status:</span><span class="tx-info-value" style="color: #4CAF50;">Valid PSBT (client-side decode)</span></div>';
+      html += '<div class="tx-info-row"><span class="tx-info-label">Format:</span><span class="tx-info-value">' + (normalized.format === 'base64' ? 'Base64' : normalized.format === 'hex' ? 'Hex' : 'Unknown') + '</span></div>';
+      html += '<div class="tx-info-row"><span class="tx-info-label">Inputs:</span><span class="tx-info-value">' + tx.numInputs + ' UTXO(s)</span></div>';
+      html += '<div class="tx-info-row"><span class="tx-info-label">Outputs:</span><span class="tx-info-value">' + tx.numOutputs + '</span></div>';
+      if (tx.inputs && tx.inputs.length > 0) {
+        html += '<div class="tx-info-row" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border);"><span class="tx-info-label" style="font-weight:bold;">Input Details:</span></div>';
+        tx.inputs.slice(0, 5).forEach((inp, idx) => {
+          const revId = revTxid(inp.prevTxid);
+          const im = parsed.inputMaps[idx];
+          const utxo = im && (im.witness_utxo || im.non_witness_utxo);
+          const inAddr = utxo && scriptPubKeyToAddress(utxo.scriptPubKey);
+          html += '<div class="tx-info-row" style="font-size:11px;color:#aaa;"><span class="tx-info-label">Input ' + (idx + 1) + ':</span><span class="tx-info-value" style="font-family:monospace;">' + revId.substring(0, 16) + '...:' + inp.prevVout + (inAddr ? ' &nbsp;<span class="addr">' + inAddr + '</span>' : '') + '</span></div>';
+        });
+        if (tx.inputs.length > 5) html += '<div class="tx-info-row" style="font-size:11px;color:#888;"><span class="tx-info-label"></span><span class="tx-info-value">... and ' + (tx.inputs.length - 5) + ' more</span></div>';
+      }
+      if (tx.outputs && tx.outputs.length > 0) {
+        html += '<div class="tx-info-row" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border);"><span class="tx-info-label" style="font-weight:bold;">Output Details:</span></div>';
+        const showOutputs = tx.outputs.length > 10;
+        if (showOutputs) html += '<div class="tx-info-scrollable">';
+        tx.outputs.forEach((out, idx) => {
+          const dec = decodeScript(out.scriptPubKey);
+          const outAddr = scriptPubKeyToAddress(out.scriptPubKey);
+          html += '<div class="tx-info-row"><span class="tx-info-label">Out ' + (idx + 1) + ':</span><span class="tx-info-value">' + (outAddr ? '<span class="addr">' + outAddr + '</span> ' : '') + scriptTypeLabel(dec.type) + ' (' + formatSats(out.value) + ')</span></div>';
+        });
+        if (showOutputs) html += '</div>';
+        html += '<div class="tx-info-row" style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border);"><span class="tx-info-label">Total Output:</span><span class="tx-info-value">' + formatSats(totalOutputValue) + '</span></div>';
+      }
+      html += '</div>';
+      html += '<div class="diagram">';
+      html += '<div class="diagram-box inputs"><div class="diagram-title">Inputs</div><div class="diagram-value">' + tx.numInputs + '</div><div class="diagram-label">UTXOs</div></div>';
+      html += '<div class="diagram-arrow">&#8594;</div>';
+      html += '<div class="diagram-box outputs"><div class="diagram-title">Outputs</div><div class="diagram-value">' + tx.numOutputs + '</div><div class="diagram-label">Outputs</div>';
+      if (totalOutputValue > 0) html += '<div class="diagram-label" style="margin-top:4px;color:#888;">Total: ' + formatSats(totalOutputValue) + '</div>';
+      html += '</div></div>';
+      return html;
+    }
+
+    // ===== PSBT DECODE & DISPLAY (manual paste) =====
+    async function decodeManualPsbt(psbtRaw) {
+      if (!psbtRaw || !psbtRaw.trim()) return;
+
+      const raw = psbtRaw.trim();
+      let normalized;
+      try {
+        normalized = normalizePsbt(raw);
+      } catch (normErr) {
+        document.getElementById('tx-info-container').innerHTML = '<div class="tx-info"><div class="tx-info-title">Decode Error</div><div class="tx-info-row"><span class="tx-info-label">Error:</span><span class="tx-info-value" style="color:#f44336;">Invalid PSBT format</span></div></div>';
+        document.getElementById('tx-info-container').style.display = 'block';
+        return;
+      }
+
+      currentPsbt = raw;
+      currentPsbtFormat = normalized.format;
+      updateFormatBadge(normalized.format);
+      const container = document.getElementById('tx-info-container');
+
+      try {
+        const decodedTx = await decodePsbtApi(normalized.psbt);
+        const isValid = decodedTx && decodedTx.inputs && decodedTx.inputs.length > 0 && decodedTx.outputs && decodedTx.outputs.length > 0;
+
+        let totalOutputValue = 0;
+        if (decodedTx.outputs) {
+          totalOutputValue = decodedTx.outputs.reduce((sum, out) => sum + (out.value || 0), 0);
+        }
+
+        let html = '<div class="tx-info">';
+        html += '<div class="tx-info-title">Transaction Details</div>';
+        html += '<div class="tx-info-row" style="border-bottom: 2px solid ' + (isValid ? '#4CAF50' : '#f44336') + '; padding-bottom: 6px; margin-bottom: 6px;">';
+        html += '<span class="tx-info-label">Status:</span>';
+        html += '<span class="tx-info-value" style="color: ' + (isValid ? '#4CAF50' : '#f44336') + ';">';
+        html += isValid ? 'Valid PSBT' : 'Invalid PSBT';
+        html += '</span></div>';
+
+        html += '<div class="tx-info-row"><span class="tx-info-label">Format:</span><span class="tx-info-value">' + (normalized.format === 'base64' ? 'Base64' : normalized.format === 'hex' ? 'Hex' : 'Unknown') + '</span></div>';
+        html += '<div class="tx-info-row"><span class="tx-info-label">Inputs:</span><span class="tx-info-value">' + (decodedTx.inputs?.length || 0) + ' UTXO(s)</span></div>';
+        html += '<div class="tx-info-row"><span class="tx-info-label">Outputs:</span><span class="tx-info-value">' + (decodedTx.outputs?.length || 0) + '</span></div>';
+
+        if (decodedTx.inputs && decodedTx.inputs.length > 0) {
+          html += '<div class="tx-info-row" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border);"><span class="tx-info-label" style="font-weight:bold;">Input Details:</span></div>';
+          const showInputs = decodedTx.inputs.slice(0, 5);
+          showInputs.forEach((input, idx) => {
+            const hashHex = input.hash?.data ? Array.from(input.hash.data).map(b => ('0' + (b & 0xFF).toString(16)).slice(-2)).join('') : 'N/A';
+            html += '<div class="tx-info-row" style="font-size:11px;color:#aaa;"><span class="tx-info-label">Input ' + (idx+1) + ':</span><span class="tx-info-value" style="font-family:monospace;">' + hashHex.substring(0,16) + '...:' + (input.index||'?') + '</span></div>';
+          });
+          if (decodedTx.inputs.length > 5) {
+            html += '<div class="tx-info-row" style="font-size:11px;color:#888;"><span class="tx-info-label"></span><span class="tx-info-value">... and ' + (decodedTx.inputs.length - 5) + ' more</span></div>';
+          }
+        }
+
+        if (decodedTx.outputs && decodedTx.outputs.length > 0) {
+          html += '<div class="tx-info-row" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border);"><span class="tx-info-label" style="font-weight:bold;">Output Details:</span></div>';
+          const showOutputs = decodedTx.outputs.length > 10;
+          if (showOutputs) html += '<div class="tx-info-scrollable">';
+          decodedTx.outputs.forEach((out, idx) => {
+            html += '<div class="tx-info-row"><span class="tx-info-label">Out ' + (idx+1) + ':</span>';
+            if (out.address) {
+              html += '<span class="tx-info-value">' + shortenAddr(out.address) + ' (' + formatSats(out.value||0) + ')</span>';
+            } else {
+              html += '<span class="tx-info-value" style="color:#888;">OP_RETURN (' + formatSats(out.value||0) + ')</span>';
+            }
+            html += '</div>';
+          });
+          if (showOutputs) html += '</div>';
+          html += '<div class="tx-info-row" style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border);"><span class="tx-info-label">Total Output:</span><span class="tx-info-value">' + formatSats(totalOutputValue) + '</span></div>';
+        }
+        html += '</div>';
+        html += '<div class="diagram">';
+        html += '<div class="diagram-box inputs"><div class="diagram-title">Inputs</div><div class="diagram-value">' + (decodedTx.inputs?.length||0) + '</div><div class="diagram-label">UTXOs</div></div>';
+        html += '<div class="diagram-arrow">&#8594;</div>';
+        html += '<div class="diagram-box outputs"><div class="diagram-title">Outputs</div><div class="diagram-value">' + (decodedTx.outputs?.length||0) + '</div><div class="diagram-label">Addresses</div>';
+        if (totalOutputValue > 0) html += '<div class="diagram-label" style="margin-top:4px;color:#888;">Total: ' + formatSats(totalOutputValue) + '</div>';
+        html += '</div></div>';
+
+        container.innerHTML = html;
+        container.style.display = 'block';
+      } catch (e) {
+        try {
+          const parsed = parsePsbtFull(raw);
+          container.innerHTML = renderSignTabFromParsed(parsed, normalized);
+          container.style.display = 'block';
+        } catch (parseErr) {
+          container.innerHTML = '<div class="tx-info"><div class="tx-info-title">Decode Error</div>'
+            + '<div class="tx-info-row"><span class="tx-info-label">API:</span><span class="tx-info-value" style="color:#f44336;font-size:12px;">' + (e.message || 'Unknown') + '</span></div>'
+            + '<div class="tx-info-row"><span class="tx-info-label">Client fallback:</span><span class="tx-info-value" style="color:#f44336;font-size:12px;">' + (parseErr.message || 'Parse failed') + '</span></div></div>';
+          container.style.display = 'block';
+          console.error('PSBT decode error (API and fallback):', e, parseErr);
+        }
+      }
+    }
+
+    // ===== JSON FILE PROCESSING =====
+    async function processJsonFile(jsonData) {
+      try {
+        jsonUploaded = true;
+        let psbtData = null;
+
+        if (jsonData.psbts && Array.isArray(jsonData.psbts) && jsonData.psbts.length > 0) {
+          psbtData = jsonData.psbts[0];
+        } else if (jsonData.psbt_base64) {
+          psbtData = jsonData;
+        } else {
+          throw new Error('No PSBT found in JSON');
+        }
+
+        if (!psbtData.psbt_base64) throw new Error('Invalid PSBT data');
+
+        currentPsbt = psbtData.psbt_base64;
+        currentPsbtFormat = 'base64';
+        updateFormatBadge('base64');
+        document.getElementById('psbt-hex-all').value = currentPsbt;
+
+        let decodedTx = null;
+        try {
+          decodedTx = await decodePsbtApi(currentPsbt);
+        } catch (e) {
+          console.warn('Could not decode PSBT:', e);
+        }
+
+        await displayTxInfo(psbtData, jsonData, decodedTx);
+        showToast('JSON file loaded with PSBT data.', 'success');
+      } catch (e) {
+        jsonUploaded = false;
+        showToast('Failed to process JSON: ' + e.message, 'error');
+        console.error(e);
+      }
+    }
+
+    // ===== BINARY PSBT FILE PROCESSING =====
+    async function processPsbtFile(arrayBuffer) {
+      try {
+        const bytes = new Uint8Array(arrayBuffer);
+        // Verify PSBT magic
+        if (bytes[0] !== 0x70 || bytes[1] !== 0x73 || bytes[2] !== 0x62 || bytes[3] !== 0x74 || bytes[4] !== 0xFF) {
+          throw new Error('Invalid PSBT file (bad magic bytes)');
+        }
+        const binary = String.fromCharCode(...bytes);
+        const base64 = btoa(binary);
+
+        currentPsbt = base64;
+        currentPsbtFormat = 'base64';
+        updateFormatBadge('base64');
+        document.getElementById('psbt-hex-all').value = base64;
+
+        let decodedTx = null;
+        try {
+          decodedTx = await decodePsbtApi(base64);
+        } catch (e) {
+          console.warn('Could not decode PSBT:', e);
+        }
+
+        if (decodedTx) {
+          await decodeManualPsbt(base64);
+        }
+        showToast('PSBT file loaded successfully.', 'success');
+      } catch (e) {
+        showToast('Failed to process PSBT file: ' + e.message, 'error');
+        console.error(e);
+      }
+    }
+
+    // ===== DISPLAY TX INFO (JSON upload) =====
+    async function displayTxInfo(psbtData, jsonData, decodedTx) {
+      const container = document.getElementById('tx-info-container');
+
+      if (!decodedTx && currentPsbt) {
+        try {
+          decodedTx = await decodePsbtApi(currentPsbt);
+        } catch (e) {
+          console.warn('Could not decode PSBT:', e);
+        }
+      }
+
+      let html = '<div class="tx-info">';
+      html += '<div class="tx-info-title">Transaction Details</div>';
+
+      // Type
+      if (jsonData.type) {
+        html += '<div class="tx-info-row"><span class="tx-info-label">Type:</span><span class="tx-info-value" style="text-transform:capitalize;">' + jsonData.type + '</span></div>';
+      }
+
+      // Airdrop info
+      if (jsonData.type === 'airdrop') {
+        if (jsonData.ticker) html += '<div class="tx-info-row"><span class="tx-info-label">Ticker:</span><span class="tx-info-value">' + jsonData.ticker + '</span></div>';
+        if (jsonData.inscription_count) html += '<div class="tx-info-row"><span class="tx-info-label">Inscriptions:</span><span class="tx-info-value">' + jsonData.inscription_count + '</span></div>';
+        if (jsonData.source_address) html += '<div class="tx-info-row"><span class="tx-info-label">Source Address:</span><span class="tx-info-value">' + shortenAddr(jsonData.source_address) + '</span></div>';
+
+        if (jsonData.inscription_details && Array.isArray(jsonData.inscription_details)) {
+          const dc = jsonData.inscription_details.length;
+          html += '<div class="tx-info-row" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);"><span class="tx-info-label" style="font-weight:bold;">Inscription Details (' + dc + '):</span></div>';
+          if (dc > 10) html += '<div class="tx-info-scrollable">';
+          jsonData.inscription_details.forEach((d, i) => {
+            html += '<div class="tx-info-row"><span class="tx-info-label">#' + (i+1) + ':</span><span class="tx-info-value" style="font-size:11px;">Inscription #' + (d.inscription_number||d.inscription_id||(i+1)) + ' → ' + shortenAddr(d.receive_address||'') + ' (' + (d.amount||0) + ' ' + (jsonData.ticker||'') + ')</span></div>';
+          });
+          if (dc > 10) html += '</div>';
+        } else if (jsonData.receive_addresses && Array.isArray(jsonData.receive_addresses)) {
+          const ac = jsonData.receive_addresses.length;
+          html += '<div class="tx-info-row"><span class="tx-info-label">Receive Addresses:</span><span class="tx-info-value">' + ac + '</span></div>';
+          if (ac > 0) {
+            if (ac > 10) html += '<div class="tx-info-scrollable">';
+            jsonData.receive_addresses.forEach((addr, i) => {
+              const amt = jsonData.inscription_amounts && jsonData.inscription_amounts[i] ? jsonData.inscription_amounts[i] + ' ' + (jsonData.ticker||'') : '';
+              html += '<div class="tx-info-row"><span class="tx-info-label">Addr ' + (i+1) + ':</span><span class="tx-info-value">' + shortenAddr(addr) + (amt ? ' (' + amt + ')' : '') + '</span></div>';
+            });
+            if (ac > 10) html += '</div>';
+          }
+        }
+        if (jsonData.change_amount && jsonData.change_amount > 0) {
+          html += '<div class="tx-info-row"><span class="tx-info-label">Change:</span><span class="tx-info-value">' + formatSats(jsonData.change_amount) + '</span></div>';
+        }
+      }
+
+      // Batch
+      if (psbtData.batch_number && psbtData.total_batches) {
+        html += '<div class="tx-info-row"><span class="tx-info-label">Batch:</span><span class="tx-info-value">' + psbtData.batch_number + ' / ' + psbtData.total_batches + '</span></div>';
+      }
+      if (jsonData.split_count_per_utxo) {
+        html += '<div class="tx-info-row"><span class="tx-info-label">Split:</span><span class="tx-info-value">' + jsonData.split_count_per_utxo + ' per UTXO</span></div>';
+      }
+      if (psbtData.rune_id || jsonData.rune_id) {
+        html += '<div class="tx-info-row"><span class="tx-info-label">Rune ID:</span><span class="tx-info-value">' + (psbtData.rune_id||jsonData.rune_id) + '</span></div>';
+      }
+      if (psbtData.rune_amount || jsonData.total_rune_amount) {
+        html += '<div class="tx-info-row"><span class="tx-info-label">Rune Amount:</span><span class="tx-info-value">' + (psbtData.rune_amount||jsonData.total_rune_amount||0).toLocaleString() + '</span></div>';
+      }
+      if (psbtData.source_address || jsonData.source_address) {
+        html += '<div class="tx-info-row"><span class="tx-info-label">From:</span><span class="tx-info-value">' + shortenAddr(psbtData.source_address||jsonData.source_address) + '</span></div>';
+      }
+      if (psbtData.receive_address || jsonData.receive_address) {
+        html += '<div class="tx-info-row"><span class="tx-info-label">To:</span><span class="tx-info-value">' + shortenAddr(psbtData.receive_address||jsonData.receive_address) + '</span></div>';
+      }
+      if (jsonData.address && !psbtData.receive_address && !jsonData.receive_address) {
+        html += '<div class="tx-info-row"><span class="tx-info-label">Address:</span><span class="tx-info-value">' + shortenAddr(jsonData.address) + '</span></div>';
+      }
+
+      // Inputs / Outputs
+      const inputs = psbtData.inputs_count || (decodedTx?.inputs?.length || 0);
+      const outputs = decodedTx?.outputs?.length || 0;
+      html += '<div class="tx-info-row"><span class="tx-info-label">Inputs:</span><span class="tx-info-value">' + inputs + ' UTXO(s)</span></div>';
+
+      // Input UTXOs
+      const inputUtxos = psbtData.utxos || jsonData.input_utxos || null;
+      if (inputUtxos && Array.isArray(inputUtxos) && inputUtxos.length > 0) {
+        const ic = inputUtxos.length;
+        html += '<div class="tx-info-row" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);"><span class="tx-info-label" style="font-weight:bold;">Input Details (' + ic + '):</span></div>';
+        if (ic > 10) html += '<div class="tx-info-scrollable">';
+        inputUtxos.forEach((u, i) => {
+          const txid = u.txid || '';
+          const short = txid.length > 14 ? txid.substring(0,8) + '...' + txid.substring(txid.length-6) : txid;
+          html += '<div class="tx-info-row"><span class="tx-info-label">In ' + (i+1) + ':</span><span class="tx-info-value" style="font-family:monospace;font-size:11px;">' + short + ':' + (u.vout||'?') + (u.satoshi ? ' (' + formatSats(u.satoshi) + ')' : '') + '</span></div>';
+        });
+        if (ic > 10) html += '</div>';
+      } else if (decodedTx && decodedTx.inputs && decodedTx.inputs.length > 0) {
+        const ic = decodedTx.inputs.length;
+        if (ic > 10) html += '<div class="tx-info-scrollable">';
+        decodedTx.inputs.forEach((input, i) => {
+          const hashHex = input.hash?.data ? Array.from(input.hash.data).map(b => ('0'+(b&0xFF).toString(16)).slice(-2)).join('') : 'N/A';
+          html += '<div class="tx-info-row" style="font-size:11px;"><span class="tx-info-label">In ' + (i+1) + ':</span><span class="tx-info-value" style="font-family:monospace;">' + hashHex.substring(0,16) + '...:' + (input.index||'?') + '</span></div>';
+        });
+        if (ic > 10) html += '</div>';
+      }
+
+      html += '<div class="tx-info-row"><span class="tx-info-label">Outputs:</span><span class="tx-info-value">' + (outputs||'?') + '</span></div>';
+
+      // Output details
+      if (decodedTx && decodedTx.outputs && decodedTx.outputs.length > 0) {
+        const oc = decodedTx.outputs.length;
+        if (oc > 10) html += '<div class="tx-info-scrollable">';
+        decodedTx.outputs.forEach((out, i) => {
+          html += '<div class="tx-info-row"><span class="tx-info-label">Out ' + (i+1) + ':</span>';
+          if (out.address) {
+            html += '<span class="tx-info-value">' + shortenAddr(out.address) + ' (' + formatSats(out.value||0) + ')</span>';
+          } else {
+            html += '<span class="tx-info-value" style="color:#888;">OP_RETURN (' + formatSats(out.value||0) + ')</span>';
+          }
+          html += '</div>';
+        });
+        if (oc > 10) html += '</div>';
+      }
+
+      // Counts & fees
+      if (psbtData.rune_utxos_count !== undefined) html += '<div class="tx-info-row"><span class="tx-info-label">Rune UTXOs:</span><span class="tx-info-value">' + psbtData.rune_utxos_count + '</span></div>';
+      if (psbtData.btc_utxos_count !== undefined) html += '<div class="tx-info-row"><span class="tx-info-label">BTC UTXOs:</span><span class="tx-info-value">' + psbtData.btc_utxos_count + '</span></div>';
+      if (psbtData.fee_rate_sat_vb) html += '<div class="tx-info-row"><span class="tx-info-label">Fee Rate:</span><span class="tx-info-value">' + psbtData.fee_rate_sat_vb + ' sat/vB</span></div>';
+      if (psbtData.estimated_fee_sats) {
+        html += '<div class="tx-info-row"><span class="tx-info-label">Est. Fee:</span><span class="tx-info-value">' + formatSats(psbtData.estimated_fee_sats) + '</span></div>';
+      } else if (decodedTx?.fee) {
+        html += '<div class="tx-info-row"><span class="tx-info-label">TX Fee:</span><span class="tx-info-value">' + formatSats(decodedTx.fee) + '</span></div>';
+      }
+
+      html += '</div>';
+
+      // Diagram
+      html += '<div class="diagram">';
+      html += '<div class="diagram-box inputs"><div class="diagram-title">Inputs</div><div class="diagram-value">' + inputs + '</div><div class="diagram-label">UTXOs</div></div>';
+      html += '<div class="diagram-arrow">&#8594;</div>';
+      html += '<div class="diagram-box outputs"><div class="diagram-title">Outputs</div><div class="diagram-value">' + (outputs||'?') + '</div><div class="diagram-label">Addresses</div>';
+      const fee = decodedTx?.fee || psbtData.estimated_fee_sats || 0;
+      if (fee > 0) html += '<div class="diagram-label" style="margin-top:4px;color:#888;">Fee: ' + formatSats(fee) + '</div>';
+      html += '</div></div>';
+
+      container.innerHTML = html;
+      container.style.display = 'block';
+    }
+
+    // ===== FILE UPLOAD =====
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('file-input');
+
+    uploadArea.addEventListener('click', () => fileInput.click());
+    uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+    uploadArea.addEventListener('dragleave', () => { uploadArea.classList.remove('dragover'); });
+
+    uploadArea.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) await handleFile(file);
+    });
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (file) await handleFile(file);
+    });
+
+    async function handleFile(file) {
+      if (file.name.endsWith('.psbt')) {
+        try {
+          const buffer = await file.arrayBuffer();
+          await processPsbtFile(buffer);
+        } catch (e) {
+          showToast('Failed to read PSBT file: ' + e.message, 'error');
+        }
+      } else if (file.type === 'application/json' || file.name.endsWith('.json')) {
+        try {
+          const text = await file.text();
+          const json = JSON.parse(text);
+          await processJsonFile(json);
+        } catch (e) {
+          showToast('Failed to read JSON file: ' + e.message, 'error');
+        }
+      } else {
+        showToast('Unsupported file type. Please upload .json or .psbt files.', 'warning');
+      }
+    }
+
+    // ===== AUTO-DECODE ON PASTE =====
+    const psbtTextarea = document.getElementById('psbt-hex-all');
+    let decodeTimeout = null;
+
+    psbtTextarea.addEventListener('input', () => {
+      if (decodeTimeout) clearTimeout(decodeTimeout);
+      if (!jsonUploaded) {
+        const val = psbtTextarea.value.trim();
+        decodeTimeout = setTimeout(() => {
+          if (val && val.length > 50) {
+            const format = detectPsbtFormat(val);
+            updateFormatBadge(format);
+            decodeManualPsbt(val);
+          } else if (val.length === 0) {
+            document.getElementById('tx-info-container').style.display = 'none';
+            updateFormatBadge(null);
+          }
+        }, 500);
+      }
+    });
+
+    psbtTextarea.addEventListener('paste', () => {
+      if (decodeTimeout) clearTimeout(decodeTimeout);
+      if (!jsonUploaded) {
+        setTimeout(() => {
+          const val = psbtTextarea.value.trim();
+          if (val && val.length > 50) {
+            const format = detectPsbtFormat(val);
+            updateFormatBadge(format);
+            decodeManualPsbt(val);
+          }
+        }, 100);
+      }
+    });
+
+    // ===== INITIALIZATION =====
+    window.addEventListener('DOMContentLoaded', async () => {
+      setBroadcastChain(broadcastChain);
+      // Restore language
+      const savedLang = localStorage.getItem('tlb_signer_lang');
+      if (savedLang) {
+        setLanguage(savedLang);
+        document.querySelectorAll('.lang-btn').forEach(b => {
+          b.classList.toggle('active', b.textContent.includes(
+            savedLang === 'en' ? 'English' : savedLang === 'ru' ? 'Русский' : '中文'
+          ));
+        });
+      }
+
+      // Collapse info by default on mobile
+      if (window.innerWidth <= 768) {
+        // Keep collapsed
+      } else {
+        document.getElementById('info-body').classList.add('open');
+        document.getElementById('info-toggle-icon').classList.add('open');
+      }
+
+      // Handle deeplink callback (must be before env detection)
+      const wasCallback = handleDeeplinkCallback();
+      if (wasCallback) {
+        // Clean URL — handle ://response path from UniSat redirect
+        // e.g. /signer.html://response?data=... → /signer.html
+        let cleanPath = window.location.pathname;
+        if (cleanPath.includes('://')) {
+          cleanPath = cleanPath.split('://')[0];
+        }
+        history.replaceState(null, '', cleanPath);
+      }
+
+      // Detect environment (waits for extension to inject, up to ~2s)
+      await detectEnvironment();
+
+      // Restore saved wallet (only if no extension available)
+      if (!hasExtension) {
+        const savedAddr = localStorage.getItem('tlb_signer_address');
+        if (savedAddr) {
+          onWalletConnected(savedAddr, localStorage.getItem('tlb_signer_pubkey') || '');
+        }
+      }
+
+      // Try to auto-detect already-connected extension
+      if (hasExtension) {
+        try {
+          let accounts = await window.unisat.getAccounts();
+          if (accounts && accounts[0]) {
+            currentAddress = accounts[0];
+            currentPubkey = await window.unisat.getPublicKey();
+            onWalletConnected(currentAddress, currentPubkey);
+          }
+        } catch (e) {}
+      }
+    });
+</script>
+</body>
+</html>
